@@ -1,0 +1,8 @@
+Midi writer
+Wav reader
+Matrix Class
+Main Fourier Transform as a thing
+Main Program bit
+
+Possible Web interface
+Possinble use of flask for simple webpage
