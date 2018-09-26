@@ -29,15 +29,16 @@ class Matrix:
                     # List of lists of objects
                     if isinstance(args[0][0], list):
                         n = len(args[0][0])
-                        for x in args[0]:
-                            if not isinstance(x, list):
+                        print(args, args[0], type(args), type(args[0]))
+                        for x in range(len(args[0])):
+                            if not isinstance(args[x], list):
                                 raise TypeError(""""Invalid values for Matrix, 
                                                 must be only of type list""")
                             for y in args[0][x]:
                                 if isinstance(y, list):
                                     raise TypeError(""""Invalid values for 2D Matrix, 
                                                     must not be list""")
-                                if len(y) != n:
+                                if len(args[0][x]) != n:
                                     raise TypeError(""""Invalid values for 2D Matrix, 
                                                         must not of equal width""")
                         # At this point, valid list of lists
@@ -80,3 +81,7 @@ class Fourier:
     """Performs a fourier transform on one Matrix of time domain values and returns a Matrix of
     frequency domain values"""
     pass
+
+
+if __name__ == "__main__":
+    a = Matrix([[1, 2], [3, 4]])
