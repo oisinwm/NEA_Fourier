@@ -1,5 +1,8 @@
 class Matrix:
-    """A  n*m matrix class, can be constructed from a list of objects or a 2d list of objects"""
+    """A  n*m matrix class, can be constructed from a list of objects or a 2d list of objects
+        a = Matrix([[1,2], [3,4]])
+        a = Matrix(m=10, n=10)
+    """
     def __init__(self, *args, **kwargs):
         self._contents = []
         self._dimensions = [0,0]
@@ -10,7 +13,7 @@ class Matrix:
                     if kwargs["m"] > 0 and kwargs["n"] > 0:
                         # construct
                         self._dimensions = [kwargs["m"], kwargs["n"]]
-                        self._contents = [[0 for x in kwargs["n"]] for y in kwargs["m"]]
+                        self._contents = [[0 for x in range(kwargs["n"])] for y in range(kwargs["m"])]
                     else:
                         raise TypeError("Matrix dimension cannot be less than 0")
 
@@ -31,7 +34,7 @@ class Matrix:
                         n = len(args[0][0])
                         print(args, args[0], type(args), type(args[0]))
                         for x in range(len(args[0])):
-                            if not isinstance(args[x], list):
+                            if not isinstance(args[0][x], list):
                                 raise TypeError(""""Invalid values for Matrix, 
                                                 must be only of type list""")
                             for y in args[0][x]:
@@ -84,4 +87,4 @@ class Fourier:
 
 
 if __name__ == "__main__":
-    a = Matrix([[1, 2], [3, 4]])
+    a = Matrix(m=10, n=10)
