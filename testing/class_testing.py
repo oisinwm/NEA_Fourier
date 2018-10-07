@@ -1,8 +1,15 @@
 class Matrix:
     """A  n*m matrix class, can be constructed from a list of objects or a 2d list of objects
+        e.g.
         a = Matrix([[1,2], [3,4]])
         a = Matrix(m=10, n=10)
+        Methods:
+            __init__
+            __rmul__
+            __add__
+            __sub__
     """
+
     def __init__(self, *args, **kwargs):
         self._contents = []
         self._dimensions = [0,0]
@@ -49,12 +56,13 @@ class Matrix:
                         self._dimensions = [len(args[0]), len(args[0][0])]
 
                     else:
+                        # At this point a 1D list is detected
                         for x in args[0]:
                             if isinstance(x, list):
                                 raise TypeError(""""Invalid values for Matrix, 
                                                 must be only of type: list""")
                         self._dimensions = [1, len(args[0])]
-                        self._contents = list(args[0])
+                        self._contents = [list(args[0])]
             else:
                 raise TypeError(f"""Invalid type for Matrix: {type(args[0])}, must be list""")
 
@@ -62,6 +70,44 @@ class Matrix:
             # don't construct, incorrect information given
             raise TypeError(f"""Invalid input length for Matrix: {type(args)}, 
                                 must be exactly 1 list""")
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._contents[key]
+        else:
+            raise KeyError
+
+    def __setitem__(self, key, value):
+        print(self._contents, key)
+        if isinstance(key, int):
+            if self._dimensions[1] >= key:
+                self._contents[key] = value
+            else:
+                raise KeyError
+        else:
+            raise KeyError
+
+    def __repr__(self):
+        return str(self._contents)
+
+    def __rmul__(self, other):
+        numberTypes = (int, float, complex)
+        matrixTypes = (Matrix, SquareMatrix)
+        if isinstance(other, numberTypes):
+            resultMatrix = Matrix(m=self._dimensions[0], n=self._dimensions[1])
+            for y in range(len(self._contents)):
+                if isinstance(self[0], list):
+                    for x in range(len(self[y])):
+                        resultMatrix[y][x] = self[y][x] * other
+                else:
+                    # in this case a 1d matrix
+                    resultMatrix[y] = self[y] * other
+
+        if isinstance(other, numberTypes):
+            # Matrix multiplication
+
+        return resultMatrix
+
 
 
 class SquareMatrix(Matrix):
@@ -87,4 +133,6 @@ class Fourier:
 
 
 if __name__ == "__main__":
-    a = Matrix(m=10, n=10)
+    A = Matrix([[1, 2], [3, 4]])
+    B = 4 * A
+    print(B)

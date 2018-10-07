@@ -1,0 +1,35 @@
+Midi writer
+Wav reader
+Matrix Class
+Main Fourier Transform as a thing
+Main Program bit
+
+Possible Web interface
+Possible use of flask for simple webpage
+
+
+MatrixClass:
+    Attributes
+    - contents
+    - dimensions
+    Methods
+    - Addition
+    - Subtraction
+    - Right Multiplication
+    - Right Division
+
+SquareMatrix:
+    Attributes
+    - contents
+    - dimensions
+    - determinant
+    Methods
+    - Addition
+    - Subtraction
+    - Right Multiplication
+    - Right Division
+    - Inverse
+
+
+Currently errors due to lack of distinction between 1*x and x*1 matrices. This is causing issues
+in the get and set item methods.
