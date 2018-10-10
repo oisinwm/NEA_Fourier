@@ -16,7 +16,7 @@ MatrixClass:
     - Addition
     - Subtraction
     - Right Multiplication
-    - Right Division
+    - Multiplication
 
 SquareMatrix:
     Attributes
@@ -30,6 +30,3 @@ SquareMatrix:
     - Right Division
     - Inverse
 
-
-Currently errors due to lack of distinction between 1*x and x*1 matrices. This is causing issues
-in the get and set item methods.

@@ -1,7 +1,12 @@
 class Wave:
-    """A representation of a Wave file, must be created from a _io.BufferedReader of a wave file """
-    pass
-
+    """A representation of a Wave file, must be created from a string containing the location of a
+     wave file on disk"""
+    def __init__(self, path):
+        with open(path, "rb") as raw_wave_file:
+            contents = raw_wave_file.read()
+        print(contents[0:4])
+        print(contents[4:8])
+        print(contents[8:12])
 
 class Midi:
     """A representation of a midi file,
@@ -16,4 +21,5 @@ class Fourier:
 
 
 if __name__ == "__main__":
-    pass
+    jim = Wave("24nocturnea.wav")
+    jim = Wave("big-nose_move_on.wav")  
