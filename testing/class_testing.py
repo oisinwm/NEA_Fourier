@@ -39,7 +39,7 @@ class Matrix:
                     # List of lists of objects
                     if isinstance(args[0][0], list):
                         n = len(args[0][0])
-                        print(args, args[0], type(args), type(args[0]))
+                        # print(args, args[0], type(args), type(args[0]))
                         for x in range(len(args[0])):
                             if not isinstance(args[0][x], list):
                                 raise TypeError(""""Invalid values for Matrix, 
@@ -78,7 +78,7 @@ class Matrix:
             raise KeyError
 
     def __setitem__(self, key, value):
-        print(self._contents, key)
+        # print(self._contents, key)
         if isinstance(key, int):
             if self._dimensions[1] >= key:
                 self._contents[key] = value
@@ -91,23 +91,60 @@ class Matrix:
         return str(self._contents)
 
     def __rmul__(self, other):
-        numberTypes = (int, float, complex)
-        matrixTypes = (Matrix, SquareMatrix)
-        if isinstance(other, numberTypes):
-            resultMatrix = Matrix(m=self._dimensions[0], n=self._dimensions[1])
+        number_types = (int, float, complex)
+        matrix_types = (Matrix, SquareMatrix)
+
+        if isinstance(other, number_types):
+            result_matrix = Matrix(m=self._dimensions[0], n=self._dimensions[1])
             for y in range(len(self._contents)):
                 if isinstance(self[0], list):
                     for x in range(len(self[y])):
-                        resultMatrix[y][x] = self[y][x] * other
+                        result_matrix[y][x] = self[y][x] * other
                 else:
                     # in this case a 1d matrix
-                    resultMatrix[y] = self[y] * other
+                    result_matrix[y] = self[y] * other
 
-        if isinstance(other, numberTypes):
-            # Matrix multiplication
+        elif isinstance(other, matrix_types):
+            # Matrix multiplication should be handled by mul not rmul,
+            #  if being found here then an error has occurred
+            raise NotImplementedError("Matrix multiplication should be handled by rmul")
 
-        return resultMatrix
 
+        return result_matrix
+
+    def __mul__(self, other):
+        number_types = (int, float, complex)
+        matrix_types = (Matrix, SquareMatrix)
+
+        if isinstance(other, matrix_types):
+            # AB = C
+            # self other = result_matrix
+            if self._dimensions[1] != other._dimensions[0]:
+                raise ValueError(f"Cannot multiply matrices of incorrect dimensions, "
+                                 f"self n ({self._dimensions[1]}) != other "
+                                 f"m ({other.get_dim()[0]})")
+            else:
+                # Multiply two matrices with the correct dimensions
+                x = self._dimensions[0]
+                y = other.get_dim()[1]
+                result_matrix = Matrix(m=x, n=y)
+
+                for i in range(self._dimensions[0]):
+                    for c in range(other.get_dim()[1]):
+                        num = 0
+                        for j in range(other.get_dim()[0]):
+                            num += self[i][j] * other[j][c]
+                        result_matrix[i][c] = num
+
+        elif isinstance(other, number_types):
+            # Scalar multiplication should be handled by rmul not mul,
+            # if being found here then an error has occurred
+            raise NotImplementedError("Scalar multiplication should be handled by rmul")
+
+        return result_matrix
+
+    def get_dim(self):
+        return self._dimensions
 
 
 class SquareMatrix(Matrix):
@@ -133,6 +170,9 @@ class Fourier:
 
 
 if __name__ == "__main__":
-    A = Matrix([[1, 2], [3, 4]])
-    B = 4 * A
-    print(B)
+    A = Matrix([[1, 4, 6, 3], [1, 4, 6, 3], [1, 4, 6, 3], [1, 4, 6, 3]])
+    B = Matrix([[80], [7], [5], [0]])
+    C = A * B
+    print(A.get_dim())
+    print(B.get_dim())
+    print(C)
