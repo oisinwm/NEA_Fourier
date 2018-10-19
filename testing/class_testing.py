@@ -10,15 +10,18 @@ class Wave:
             raise TypeError("Specified file is not in wave format")
 
         filesize = contents[4:8].hex()
-        self.filesize = int(self.little_endian(filesize), 2)
+        self.filesize = int(self.little_endian(filesize), 2)  # This correctly calculates filesize
         headerChunk = contents[:12]
+        print(self.filesize)
 
-        fmt = contents[16:20].hex()
-        fmtsize = int(self.little_endian(fmt), 2) // 2
+        fmtSizeHex = contents[16:20].hex()
+        fmtSize = int(self.little_endian(fmtSizeHex), 2)  # This does not correctly calculate
+        #                                                        chunksize, seems it isn't actually little endian
+        print(fmtSize)
 
-        formatChunk = contents[12:12+fmtsize]
-        print(formatChunk[4:8])
+        formatChunk = contents[12:50]
         # bytes 12:16 'fmt '
+        print(formatChunk)
 
         sample = contents[20:21].hex()
         self.samplerate = int(self.little_endian(sample), 2)
@@ -26,8 +29,12 @@ class Wave:
 
     def little_endian(self, rawbytes):
         digits = "0123456789abcdef"
-        binaryDigits = [bin(digits.index(i))[2:].zfill(4)[::-1] for i in rawbytes if i in digits][::-1]
-        return "".join(binaryDigits)
+        binaryDigits = []
+        for i in rawbytes:
+            if str(i) in digits:
+                digi = bin(digits.index(str(i)))[2:].zfill(4)[::-1]
+                binaryDigits.append(digi)
+        return "".join(binaryDigits)[::-1]
 
 
 class Midi:
