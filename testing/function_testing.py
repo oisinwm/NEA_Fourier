@@ -1,14 +1,20 @@
-def little_endian(rawbytes):
-    digits = "0123456789abcdef"
-    binaryDigits = []
-    for i in str(rawbytes):
-        if str(i) in digits:
-            digi = bin(digits.index(str(i)))
-            print(digi)
-            binaryDigits.append(digi)
-    return "".join(binaryDigits)[::-1]
+def little_bin(rawbytes):
+    """Returns the integer representation of an unsigned 32 bit integer,
+        stored as bytes in little endian"""
+    bytez = []
+    for i in rawbytes:
+        bytez.append(hex(i)[2:].zfill(2))
+    hexstr = "".join(bytez[::-1])
+    # at this point need a string of raw hex digits only
+    print(hexstr)
+    result = ""
+    for x in hexstr:
+        digits = bin(int(x, 16))[2:].zfill(4)
+        result += digits
+
+    return result
 
 
-a = little_endian(b"\x12\x00\x00\x00")
+a = little_bin(b"\x06\xfc\x07\x01")
 print(a)
 print(int(a, 2))
