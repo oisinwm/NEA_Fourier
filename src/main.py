@@ -94,6 +94,7 @@ class Matrix:
     def __rmul__(self, other):
         number_types = (int, float, complex)
         matrix_types = (Matrix, SquareMatrix)
+        result_matrix = self
 
         if isinstance(other, number_types):
             result_matrix = Matrix(m=self._dimensions[0], n=self._dimensions[1])
@@ -115,6 +116,7 @@ class Matrix:
     def __mul__(self, other):
         number_types = (int, float, complex)
         matrix_types = (Matrix, SquareMatrix)
+        result_matrix = self
 
         if isinstance(other, matrix_types):
             # AB = C
