@@ -16,19 +16,32 @@ class Wave:
         filesize = contents[4:8]
         self.filesize = int(self.little_bin(filesize), 2)  # This correctly calculates filesize
         headerChunk = contents[:12]
-        print(self.filesize)
 
         fmtSizeRaw = contents[16:20]
         fmtSize = int(self.little_bin(fmtSizeRaw), 2)
-        print(fmtSize)
 
-        formatChunk = contents[12:50]
+        formatChunk = contents[12:20+fmtSize]
         # bytes 12:16 'fmt '
-        print(formatChunk)
 
         sample = contents[24:26]
         self.samplerate = int(self.little_bin(sample), 2)
-        print(self.samplerate)
+
+        channels = contents[22:24]
+        self.channels = int(self.little_bin(channels), 2)
+
+        framesize = contents[32:34]
+        self.framesize = int(self.little_bin(framesize), 2)
+
+        bitdepth = contents[34:38]
+        self.bitdepth = int(self.little_bin(bitdepth), 2)
+
+        datalen = contents[42:46]
+        self.datalen = int(self.little_bin(datalen), 2)
+
+        # Read in data from array
+
+
+
 
     def little_bin(self, rawbytes):
         """Returns the integer representation of an unsigned 32 bit integer,
@@ -45,6 +58,16 @@ class Wave:
             result += digits
 
         return result
+
+    def signed_int(self, rawbytes):
+        """Returns the integer representation of an unsigned 32 bit integer,
+            stored as bytes in little endian"""
+        if self.framesize == 8:
+            pass
+        if self.framesize == 16:
+            pass
+        if self.framesize == 32:
+            pass
 
 
 class Midi:

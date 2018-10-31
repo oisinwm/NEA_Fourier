@@ -15,6 +15,6 @@ def little_bin(rawbytes):
     return result
 
 
-a = little_bin(b"\x06\xfc\x07\x01")
+a = little_bin(b"\x12\x00\x00\x00")
 print(a)
 print(int(a, 2))
