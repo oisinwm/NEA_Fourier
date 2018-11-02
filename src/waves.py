@@ -1,4 +1,5 @@
 import matrices
+import math
 
 
 class Wave:
@@ -59,6 +60,15 @@ class Wave:
                 a = self.little_bin(channelData)
                 b = self.signed_int(a)
                 self.frameDataLists[x].append([b])
+
+        # Prepare lists for FFT
+        self.dataMatrices = []
+        y = len(self.frameDataLists[0])
+        x = int(2 ** math.ceil(math.log(y, 2))) - y
+        print(x)
+        for sampleList in self.frameDataLists:
+            for i in range(x):
+                sampleList.append(0)
 
         self.dataMatrices = [matrices.Matrix(sampleList) for sampleList in self.frameDataLists]
 

@@ -1,3 +1,6 @@
+import math
+
+
 class Matrix:
     """A  n*m matrix class, can be constructed from a list of objects or a 2d list of objects
         e.g.
@@ -214,7 +217,14 @@ class Wave:
                 b = self.signed_int(a)
                 self.frameDataLists[x].append([b])
 
-        self.dataMatrices = [Matrix(sampleList) for sampleList in self.frameDataLists]
+        # Prepare lists for FFT
+        self.dataMatrices = []
+        y = len(self.frameDataLists[0])
+        x = int(2 ** math.ceil(math.log(y, 2))) - y
+        for sampleList in self.frameDataLists:
+            for i in range(x):
+                sampleList.append([0])
+            self.dataMatrices.append(Matrix(sampleList))
 
     def little_bin(self, rawbytes):
         """Returns the binary representation of an unsigned 32 bit integer,
