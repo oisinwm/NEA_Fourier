@@ -1,35 +1,58 @@
-def little_bin(rawbytes):
-    """Returns the binary representation of an unsigned 32 bit integer,
-        from little endian hex"""
-    # print(rawbytes)
-    bytez = []
-    for i in rawbytes:
-        bytez.append(hex(i)[2:].zfill(2))
-    hexstr = "".join(bytez[::-1])
-    # at this point need a string of raw hex digits only
-    result = ""
-    for x in hexstr:
-        digits = bin(int(x, 16))[2:].zfill(4)
-        result += digits
-
-    return result
+# Got initial matrix of samples, 1*no_of_samples
+# Need to loop through he sample matrix, taking slices through time
+# For each slice, perform a fourier transform to produce likely frequencies
+# Turn likely frequencies into likely notes
+# When likelyhood of note is above threshold, set the note to active at that time
+# Transcribe note activity to midi file
+# Done
+#
+#
+# Now add volume of note at specific time (may have to be relative as opposed to absolute)
+import math
+import cmath
+import class_testing
 
 
-def signed_int(rawbytes):
-    """Returns the integer representation of a signed integer,
-        from binary"""
-    frameSize = 16
-    if frameSize == 8:
-        # Data is unsigned 8 bit integer (-128 to 127)
-        return int(rawbytes, 2)
-    if frameSize == 16:
-        # Data is signed 16 bit integer (-32768 to 32768)
-        return -32768 + int(rawbytes[1:], 2)
-    if frameSize == 32:
-        # Data is a float (-1.0f ro 1f)
-        raise NotImplementedError("Cannot read 32 bit wave file")
+def omega(n):
+    return cmath.exp(-2 * math.pi * 1j / n)
 
 
-a = little_bin(b'\xff\xff')
-print(a)
-print(signed_int(a))
+def sample(amp, freq, x):
+        return amp * math.sin(freq*x)
+
+
+def generate_test_matrix(frequency, samplerate, length):
+    """Given a frequency(Hz), samplerate(Hz) and length(s) returns a matrix of the samples that
+    sound would create, if it were a recording of sound from a wave file."""
+    amplitude = 10
+
+    sample_list = []
+    for x in range(length):
+        for y in range(samplerate):
+            # x is the integer part of time, y is the decimal
+            t = x + (y/samplerate)
+
+            samp = sample(amplitude, frequency, t)
+            sample_list.append([samp])
+
+    return sample_list
+
+
+sampleList = generate_test_matrix(220, 44100, 2)
+sampleVector = class_testing.Matrix(sampleList)
+N = sampleVector.get_dim()[0]
+
+omega_N = omega(N)
+print(N, omega_N)
+
+DFT_list = []
+for y in range(N):
+    if y%100==0:
+        print(y)
+    row = []
+    for x in range(N):
+        pw = x*y
+        row.append(omega_N ** pw)
+    DFT_list.append(row)
+
+print(DFT_list[0][0], DFT_list[0][1], DFT_list[1][0], DFT_list[1][1])
