@@ -8,8 +8,7 @@
 #
 #
 # Now add volume of note at specific time (may have to be relative as opposed to absolute)
-import math
-import cmath
+import math, cmath, pickle
 import class_testing
 
 
@@ -46,13 +45,29 @@ omega_N = omega(N)
 print(N, omega_N)
 
 DFT_list = []
-for y in range(N):
-    if y%100==0:
-        print(y)
-    row = []
-    for x in range(N):
-        pw = x*y
-        row.append(omega_N ** pw)
-    DFT_list.append(row)
 
-print(DFT_list[0][0], DFT_list[0][1], DFT_list[1][0], DFT_list[1][1])
+omega_dict = {}
+with open('omega_dict.pickle', 'wb') as handle:
+    pickle.dump(omega_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+for i in range(N**2):
+    with open('omega_dict.pickle', 'rb') as handle:
+        omega_dict = pickle.load(handle)
+    omega_dict[i] = omega_N ** i
+    with open('omega_dict.pickle', 'wb') as handle:
+        pickle.dump(omega_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    a = len(omega_dict)
+    if a % 100 == 0:
+        print(a)
+
+# for y in range(N):
+#     row = []
+#     if y%100==0:
+#         print(y)
+#     for x in range(N):
+#         pw = x*y
+#         row.append(omega_dict[pw])
+#     DFT_list.append(row)
+#
+# print(DFT_list[0][0], DFT_list[0][1], DFT_list[1][0], DFT_list[1][1])
