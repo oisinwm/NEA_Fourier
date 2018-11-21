@@ -11,6 +11,9 @@
 import math
 import cmath
 import class_testing
+import matplotlib.pyplot
+import time
+import pickle
 
 
 def omega(n):
@@ -27,32 +30,52 @@ def generate_test_matrix(frequency, samplerate, length):
     amplitude = 10
 
     sample_list = []
-    for x in range(length):
-        for y in range(samplerate):
-            # x is the integer part of time, y is the decimal
-            t = x + (y/samplerate)
+    for y in range(int(length*samplerate)):
+        # x is the integer part of time, y is the decimal
+        x = y // samplerate
+        t = x + (y/samplerate)
 
-            samp = sample(amplitude, frequency, t)
-            sample_list.append([samp])
+        samp = sample(amplitude, frequency, t)
+        sample_list.append([samp])
 
     return sample_list
 
 
-sampleList = generate_test_matrix(220, 44100, 2)
+# This is bad
+sampleList = generate_test_matrix(10, 44100, 1)
 sampleVector = class_testing.Matrix(sampleList)
 N = sampleVector.get_dim()[0]
+
+matplotlib.pyplot.plot(sampleList)
+matplotlib.pyplot.show()
 
 omega_N = omega(N)
 print(N, omega_N)
 
 DFT_list = []
-for y in range(N):
-    if y%100==0:
-        print(y)
-    row = []
-    for x in range(N):
-        pw = x*y
-        row.append(omega_N ** pw)
-    DFT_list.append(row)
 
-print(DFT_list[0][0], DFT_list[0][1], DFT_list[1][0], DFT_list[1][1])
+time_start = time.clock()
+for x in range(N):
+    factor = []
+    if x % 100 == 0:
+        print(x)
+    for y in range(N):
+        factor.append(omega_N ** (x*y))
+    factorVector = class_testing.Matrix(factor)
+    answer = factorVector * sampleVector
+    DFT_list.append(answer[0][0])
+
+magnitude_list = [cmath.polar(i)[0] for i in DFT_list]
+time_end = time.clock()
+print(time_end - time_start)
+
+with open("out.pickle", "wb") as file:
+    pickle.dump(magnitude_list, file, protocol=pickle.HIGHEST_PROTOCOL)
+
+with open("out.pickle", "rb") as file:
+    stuff = pickle.load(file)
+
+matplotlib.pyplot.plot(stuff)
+matplotlib.pyplot.show()
+
+print("complete")
