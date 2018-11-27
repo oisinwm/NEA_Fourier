@@ -20,7 +20,7 @@ def omega(n):
 
 
 def sample(amp, freq, x):
-        return amp * math.sin(freq*x)
+        return amp * math.sin(freq*x*2*math.pi)
 
 
 def generate_test_matrix(frequency, samplerate, length):
@@ -41,7 +41,7 @@ def generate_test_matrix(frequency, samplerate, length):
 
 
 # This is bad
-sampleList = generate_test_matrix(10, 44100, 1)
+sampleList = generate_test_matrix(10, 44100, 0.25)
 sampleVector = class_testing.Matrix(sampleList)
 N = sampleVector.get_dim()[0]
 
@@ -53,7 +53,7 @@ print(N, omega_N)
 
 DFT_list = []
 
-time_start = time.clock()
+time_start = time.process_time()
 for x in range(N):
     factor = []
     if x % 100 == 0:
@@ -61,11 +61,12 @@ for x in range(N):
     for y in range(N):
         factor.append(omega_N ** (x*y))
     factorVector = class_testing.Matrix(factor)
+    factorVector = (1 / math.sqrt(N)) * factorVector
     answer = factorVector * sampleVector
     DFT_list.append(answer[0][0])
 
 magnitude_list = [cmath.polar(i)[0] for i in DFT_list]
-time_end = time.clock()
+time_end = time.process_time()
 print(time_end - time_start)
 
 with open("out.pickle", "wb") as file:

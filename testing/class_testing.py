@@ -213,10 +213,10 @@ class Wave:
         self.dataMatrices = []
         y = len(self.frameDataLists[0])
         x = int(2 ** math.ceil(math.log(y, 2))) - y
-        print(x)
+
         for sampleList in self.frameDataLists:
             for i in range(x):
-                sampleList.append(0)
+                sampleList.append([0])
 
         self.dataMatrices = [Matrix(sampleList) for sampleList in self.frameDataLists]
 
