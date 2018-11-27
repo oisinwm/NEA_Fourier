@@ -8,8 +8,7 @@
 #
 #
 # Now add volume of note at specific time (may have to be relative as opposed to absolute)
-import math
-import cmath
+import math, cmath, pickle
 import class_testing
 import matplotlib.pyplot
 import time
