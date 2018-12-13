@@ -253,7 +253,7 @@ class Wave:
             return -32768 + int(rawbytes[1:], 2)
         elif self.bitDepth == 32:
             # Data is a float (-1.0f ro 1f)
-            raise NotImplementedError("Cannot read 32 bit wave file yet")
+            raise NotImplementedError("Cannot read 32 bit wave file")
 
 
 if __name__ == "__main__":
