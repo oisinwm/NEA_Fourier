@@ -1,4 +1,5 @@
-import math, cmath
+import math
+import cmath
 
 
 class Matrix:
@@ -48,15 +49,15 @@ class Matrix:
                         # print(args, args[0], type(args), type(args[0]))
                         for x in range(len(args[0])):
                             if not isinstance(args[0][x], list):
-                                raise TypeError(""""Invalid values for Matrix, 
-                                                must be only of type list""")
+                                raise TypeError(
+                                    "Invalid values for Matrix, must be only of type list")
                             for y in args[0][x]:
                                 if isinstance(y, list):
-                                    raise TypeError(""""Invalid values for 2D Matrix, 
-                                                    must not be list""")
+                                    raise TypeError(
+                                        "Invalid values for 2D Matrix, must not be list")
                                 if len(args[0][x]) != n:
-                                    raise TypeError(""""Invalid values for 2D Matrix, 
-                                                        must not of equal width""")
+                                    raise TypeError(
+                                        "Invalid values for 2D Matrix, must not of equal width")
                         # At this point, valid list of lists
                         self._contents = args[0]
                         self._dimensions = [len(args[0]), len(args[0][0])]
@@ -65,11 +66,14 @@ class Matrix:
                         # At this point a 1D list is detected
                         for x in args[0]:
                             if isinstance(x, list):
-                                raise TypeError(""""Invalid values for Matrix, 
-                                                must be only of type: list""")
+                                raise TypeError(
+                                    "Invalid values for Matrix, must be only of type: list")
+
                         self._dimensions = [1, len(args[0])]
                         self._contents = [list(args[0])]
-            
+                        if all(isinstance(x, self.matrix_types) for x in args[0]):
+                            self._contents = self._contents[0]
+
             elif isinstance(args[0], self.matrix_types):
                 self._contents = args[0]._contents
                 self._dimensions = args[0]._dimensions
@@ -134,7 +138,7 @@ class Matrix:
 
                 for i in range(self._dimensions[0]):
                     for c in range(other.get_dim()[1]):
-                        num = 0 #This is an issue when adding two matrices
+                        num = 0  # This is an issue when adding two matrices
                         for j in range(other.get_dim()[0]):
                             a = self[i][j] * other[j][c]
                             if num == 0:
@@ -149,11 +153,12 @@ class Matrix:
             raise NotImplementedError("Scalar multiplication should be handled by rmul")
 
         return result_matrix
-    
+
     def __add__(self, other):
         if isinstance(other, self.matrix_types):
             if self.get_dim() != other.get_dim():
-                raise ValueError(f"Cannot multiply matrices of different dimensions, self ({self.get_dim()}) != other ({other.get_dim()})")
+                raise ValueError(
+                    f"Cannot add matrices of different dimensions, self ({self.get_dim()}) != other ({other.get_dim()})")
             else:
                 x = self.get_dim()[0]
                 y = self.get_dim()[1]
@@ -162,14 +167,16 @@ class Matrix:
                     for j in range(y):
                         result_matrix[i][j] = self[i][j] + other[i][j]
                 return result_matrix
-                    
+
         else:
-            raise NotImplementedError(f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
-    
+            raise NotImplementedError(
+                f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
+
     def __sub__(self, other):
         if isinstance(other, self.matrix_types):
             if self.get_dim() != other.get_dim():
-                raise ValueError(f"Cannot multiply matrices of different dimensions, self ({self.get_dim()}) != other ({other.get_dim()})")
+                raise ValueError(
+                    f"Cannot multiply matrices of different dimensions, self ({self.get_dim()}) != other ({other.get_dim()})")
             else:
                 x = self.get_dim()[0]
                 y = self.get_dim()[1]
@@ -179,7 +186,8 @@ class Matrix:
                         result_matrix[i][j] = self[i][j] - other[i][j]
                 return result_matrix
         else:
-            raise NotImplementedError(f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
+            raise NotImplementedError(
+                f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
 
     def get_dim(self):
         return self._dimensions
@@ -188,6 +196,7 @@ class Matrix:
 class Wave:
     """A representation of a Wave file, must be created from a string containing the location of a
      wave file on disk"""
+
     def __init__(self, path):
         with open(path, "rb") as raw_wave_file:
             contents = raw_wave_file.read()
@@ -232,9 +241,9 @@ class Wave:
 
         # print(framesNum)
         self.frameDataLists = [[] for i in range(self.channels)]
-        for frame in range(framesNum-1):
+        for frame in range(framesNum - 1):
             start = self.frameStartIndex + frame * self.frameSize
-            end = self.frameStartIndex + (frame+1) * self.frameSize
+            end = self.frameStartIndex + (frame + 1) * self.frameSize
             data = contents[start:end]
             for x in range(self.channels):
                 s = x * self.bitDepth // 8
@@ -254,7 +263,6 @@ class Wave:
                 sampleList.append([0])
         self.dataMatrices = [Matrix(sampleList) for sampleList in self.frameDataLists]
 
-
     def little_bin(self, rawbytes):
         """Returns the binary representation of an unsigned 32 bit integer,
             from little endian hex"""
@@ -270,7 +278,6 @@ class Wave:
             result += digits
         return result
 
-
     def signed_int(self, rawbytes):
         """Returns the integer representation of a signed integer,
             from binary"""
@@ -284,9 +291,13 @@ class Wave:
             # Data is a float (-1.0f ro 1f)
             raise NotImplementedError("Cannot read 32 bit wave file yet")
 
+    def get_data(self):
+        return self.dataMatrices
+
 
 class SquareMatrix(Matrix):
     """A n*n matrix class, a special instance of a Matrix that is square"""
+
     def __init__(self):
         Matrix.__init__(self)
 
@@ -300,20 +311,33 @@ class Midi:
 class Fourier(Matrix):
     """Performs a fourier transform on one Matrix of time domain values and returns a Matrix of
     frequency domain values"""
+
     def __init__(self, matrix):
         Matrix.__init__(self, matrix)
-        self.omega_N = self.omega(max(self._dimensions))
-        
-    def omega(self, n):
-        return cmath.exp(-2 * math.pi * 1j / n)
-    
-    def decompose(self):
-        pass
-    
+        self._omega_N = cmath.exp(-2 * math.pi * 1j / max(self._dimensions))
+
+    @staticmethod
+    def decompose(vector: Matrix):
+        # This function wraps the vector in an unneeded pair of brackets
+        if math.log(vector.get_dim()[0], 2) > 2:
+            even, odd = vector._contents[::2], vector._contents[1::2]
+            even, odd = Matrix(even), Matrix(odd)
+            even, odd = Fourier.decompose(even), Fourier.decompose(odd)
+            return Matrix([even, odd])
+        else:
+            return vector
 
 
 if __name__ == "__main__":
-    a = Matrix([[2, 2], [2, 2]])
-    b = Fourier(a)
-    
-    
+    # a = Wave("24nocturnea.wav")
+    # print(a.get_data()[0].get_dim(), a.get_data()[1].get_dim())
+    # b = Fourier(a.get_data()[0])
+    # print(b._omega_N)
+    # print(a.get_data()[0].get_dim())
+    a = [[1], [2], [3], [4], [1], [2], [3], [4]]
+    A = Fourier(a)
+    B = Fourier.decompose(A)
+    print(B)
+    test = Matrix([[Matrix([[1, 2], [3, 4]]), Matrix([[1, 2], [3, 4]])],
+                   [Matrix([[1, 2], [3, 4]]), Matrix([[1, 2], [3, 4]])]])
+    print(B * test)
