@@ -1,4 +1,4 @@
-import math
+import math, cmath
 
 
 class Matrix:
@@ -16,6 +16,8 @@ class Matrix:
     def __init__(self, *args, **kwargs):
         self._contents = []
         self._dimensions = [0, 0]
+        self.number_types = (int, float, complex)
+        self.matrix_types = (Matrix, SquareMatrix)
         if len(args) == 0 and len(kwargs) == 2:
             # construct from a and b, if validation passes
             if kwargs.keys() == {"m": 0, "n": 0}.keys():
@@ -67,8 +69,12 @@ class Matrix:
                                                 must be only of type: list""")
                         self._dimensions = [1, len(args[0])]
                         self._contents = [list(args[0])]
+            
+            elif isinstance(args[0], self.matrix_types):
+                self._contents = args[0]._contents
+                self._dimensions = args[0]._dimensions
             else:
-                raise TypeError(f"""Invalid type for Matrix: {type(args[0])}, must be list""")
+                raise TypeError(f"Invalid type for Matrix: {type(args[0])}, must be list or matrix")
 
         else:
             # don't construct, incorrect information given
@@ -95,10 +101,7 @@ class Matrix:
         return str(self._contents)
 
     def __rmul__(self, other):
-        number_types = (int, float, complex)
-        matrix_types = (Matrix, SquareMatrix)
-
-        if isinstance(other, number_types):
+        if isinstance(other, self.number_types):
             result_matrix = Matrix(m=self._dimensions[0], n=self._dimensions[1])
             for y in range(len(self._contents)):
                 if isinstance(self[0], list):
@@ -108,7 +111,7 @@ class Matrix:
                     # in this case a 1d matrix
                     result_matrix[y] = self[y] * other
 
-        elif isinstance(other, matrix_types):
+        elif isinstance(other, self.matrix_types):
             # Matrix multiplication should be handled by mul not rmul,
             #  if being found here then an error has occurred
             raise NotImplementedError("Matrix multiplication should be handled by rmul")
@@ -116,10 +119,7 @@ class Matrix:
         return result_matrix
 
     def __mul__(self, other):
-        number_types = (int, float, complex)
-        matrix_types = (Matrix, SquareMatrix)
-
-        if isinstance(other, matrix_types):
+        if isinstance(other, self.matrix_types):
             # AB = C
             # self other = result_matrix
             if self._dimensions[1] != other._dimensions[0]:
@@ -128,23 +128,58 @@ class Matrix:
                                  f"m ({other.get_dim()[0]})")
             else:
                 # Multiply two matrices with the correct dimensions
-                x = self._dimensions[0]
+                x = self.get_dim()[0]
                 y = other.get_dim()[1]
                 result_matrix = Matrix(m=x, n=y)
 
                 for i in range(self._dimensions[0]):
                     for c in range(other.get_dim()[1]):
-                        num = 0
+                        num = 0 #This is an issue when adding two matrices
                         for j in range(other.get_dim()[0]):
-                            num += self[i][j] * other[j][c]
+                            a = self[i][j] * other[j][c]
+                            if num == 0:
+                                num = a
+                            else:
+                                num += a
                         result_matrix[i][c] = num
 
-        elif isinstance(other, number_types):
+        elif isinstance(other, self.number_types):
             # Scalar multiplication should be handled by rmul not mul,
-            # if being found here then an error has occurred
+            # if here then an error has occurred
             raise NotImplementedError("Scalar multiplication should be handled by rmul")
 
         return result_matrix
+    
+    def __add__(self, other):
+        if isinstance(other, self.matrix_types):
+            if self.get_dim() != other.get_dim():
+                raise ValueError(f"Cannot multiply matrices of different dimensions, self ({self.get_dim()}) != other ({other.get_dim()})")
+            else:
+                x = self.get_dim()[0]
+                y = self.get_dim()[1]
+                result_matrix = Matrix(m=x, n=y)
+                for i in range(x):
+                    for j in range(y):
+                        result_matrix[i][j] = self[i][j] + other[i][j]
+                return result_matrix
+                    
+        else:
+            raise NotImplementedError(f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
+    
+    def __sub__(self, other):
+        if isinstance(other, self.matrix_types):
+            if self.get_dim() != other.get_dim():
+                raise ValueError(f"Cannot multiply matrices of different dimensions, self ({self.get_dim()}) != other ({other.get_dim()})")
+            else:
+                x = self.get_dim()[0]
+                y = self.get_dim()[1]
+                result_matrix = Matrix(m=x, n=y)
+                for i in range(x):
+                    for j in range(y):
+                        result_matrix[i][j] = self[i][j] - other[i][j]
+                return result_matrix
+        else:
+            raise NotImplementedError(f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
 
     def get_dim(self):
         return self._dimensions
@@ -217,8 +252,8 @@ class Wave:
         for sampleList in self.frameDataLists:
             for i in range(x):
                 sampleList.append([0])
-
         self.dataMatrices = [Matrix(sampleList) for sampleList in self.frameDataLists]
+
 
     def little_bin(self, rawbytes):
         """Returns the binary representation of an unsigned 32 bit integer,
@@ -233,8 +268,8 @@ class Wave:
         for x in hexstr:
             digits = bin(int(x, 16))[2:].zfill(4)
             result += digits
-
         return result
+
 
     def signed_int(self, rawbytes):
         """Returns the integer representation of a signed integer,
@@ -262,11 +297,23 @@ class Midi:
     pass
 
 
-class Fourier:
+class Fourier(Matrix):
     """Performs a fourier transform on one Matrix of time domain values and returns a Matrix of
     frequency domain values"""
-    pass
+    def __init__(self, matrix):
+        Matrix.__init__(self, matrix)
+        self.omega_N = self.omega(max(self._dimensions))
+        
+    def omega(self, n):
+        return cmath.exp(-2 * math.pi * 1j / n)
+    
+    def decompose(self):
+        pass
+    
 
 
 if __name__ == "__main__":
-    jim = Wave("24nocturnea.wav")
+    a = Matrix([[2, 2], [2, 2]])
+    b = Fourier(a)
+    
+    
