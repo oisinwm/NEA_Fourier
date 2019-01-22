@@ -105,6 +105,9 @@ class Matrix:
         return str(self._contents)
 
     def __rmul__(self, other):
+        if isinstance(other, list):
+            if len(other) == 1:
+                other = other[0]
         if isinstance(other, self.number_types):
             result_matrix = Matrix(m=self._dimensions[0], n=self._dimensions[1])
             for y in range(len(self._contents)):
@@ -119,7 +122,7 @@ class Matrix:
             # Matrix multiplication should be handled by mul not rmul,
             #  if being found here then an error has occurred
             raise NotImplementedError("Matrix multiplication should be handled by rmul")
-
+        
         return result_matrix
 
     def __mul__(self, other):
@@ -322,6 +325,7 @@ class Fourier(Matrix):
         if math.log(vector.get_dim()[0], 2) > 2:
             even, odd = vector._contents[::2], vector._contents[1::2]
             even, odd = Matrix(even), Matrix(odd)
+            print(even, odd)
             even, odd = Fourier.decompose(even), Fourier.decompose(odd)
             return Matrix([even, odd])
         else:
@@ -334,10 +338,11 @@ if __name__ == "__main__":
     # b = Fourier(a.get_data()[0])
     # print(b._omega_N)
     # print(a.get_data()[0].get_dim())
-    a = [[1], [2], [3], [4], [1], [2], [3], [4]]
+    a = [[1], [2], [3], [4]]
     A = Fourier(a)
-    B = Fourier.decompose(A)
+    B = Fourier.decompose(A) # Decomposistion is V broke
     print(B)
     test = Matrix([[Matrix([[1, 2], [3, 4]]), Matrix([[1, 2], [3, 4]])],
-                   [Matrix([[1, 2], [3, 4]]), Matrix([[1, 2], [3, 4]])]])
-    print(B * test)
+                  [Matrix([[1, 2], [3, 4]]), Matrix([[1, 2], [3, 4]])]])
+    print(test.get_dim())
+    print(test*B)
