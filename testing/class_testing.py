@@ -129,6 +129,7 @@ class Matrix:
         if isinstance(other, self.matrix_types):
             # AB = C
             # self other = result_matrix
+            print("\n", self, other)
             if self._dimensions[1] != other._dimensions[0]:
                 raise ValueError(f"Cannot multiply matrices of incorrect dimensions, "
                                  f"self n ({self._dimensions[1]}) != other "
@@ -319,15 +320,15 @@ class Fourier(Matrix):
         Matrix.__init__(self, matrix)
         self._omega_N = cmath.exp(-2 * math.pi * 1j / max(self._dimensions))
 
-    @staticmethod
-    def decompose(vector: Matrix):
+    def decompose(self):
+        vector = self
         # This function wraps the vector in an unneeded pair of brackets
         if math.log(vector.get_dim()[0], 2) > 2:
             even, odd = vector._contents[::2], vector._contents[1::2]
             even, odd = Matrix(even), Matrix(odd)
             print(even, odd)
             even, odd = Fourier.decompose(even), Fourier.decompose(odd)
-            return Matrix([even, odd])
+            return Matrix([[even], [odd]])
         else:
             return vector
 
@@ -338,11 +339,24 @@ if __name__ == "__main__":
     # b = Fourier(a.get_data()[0])
     # print(b._omega_N)
     # print(a.get_data()[0].get_dim())
-    a = [[1], [2], [3], [4]]
-    A = Fourier(a)
-    B = Fourier.decompose(A) # Decomposistion is V broke
+    A = Matrix([[3],[4],[6],[7],[8],[9],[0],[9]])
+    B = Fourier(A).decompose()
+    
     print(B)
-    test = Matrix([[Matrix([[1, 2], [3, 4]]), Matrix([[1, 2], [3, 4]])],
-                  [Matrix([[1, 2], [3, 4]]), Matrix([[1, 2], [3, 4]])]])
-    print(test.get_dim())
-    print(test*B)
+    
+    test = Matrix([[Matrix([[1, 2, 5, 6], [3, 4, 6, 7], [1, 2, 5, 6], [3, 4, 6, 7]]),Matrix([[1, 2, 5, 6], [3, 4, 6, 7],[1, 2, 5, 6], 
+                              [3, 4, 6, 7]])],[Matrix([[1, 2, 5, 6], 
+                              [3, 4, 6, 7], 
+                              [1, 2, 5, 6], 
+                              [3, 4, 6, 7]]),Matrix([[1, 2, 5, 6], 
+                              [3, 4, 6, 7], 
+                              [1, 2, 5, 6], 
+                              [3, 4, 6, 7]])]])
+    
+    print("mat ", test.get_dim(), "vect ", B.get_dim())
+    C = test * B
+    print(type(C), type(C[0]), type(C[0][0]))
+    # B = Fourier.decompose(A) # Decomposistion is V broke
+    # print(B)
+    print(C)
+
