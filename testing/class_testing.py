@@ -121,15 +121,14 @@ class Matrix:
         elif isinstance(other, self.matrix_types):
             # Matrix multiplication should be handled by mul not rmul,
             #  if being found here then an error has occurred
-            raise NotImplementedError("Matrix multiplication should be handled by rmul")
+            raise NotImplementedError("Matrix multiplication should be handled by mul")
         
         return result_matrix
 
     def __mul__(self, other):
-        if isinstance(other, self.matrix_types):
-            # AB = C
-            # self other = result_matrix
-            print("\n", self, other)
+        if isinstance(other, Identity):
+            return Matrix(self)
+        elif isinstance(other, self.matrix_types):
             if self._dimensions[1] != other._dimensions[0]:
                 raise ValueError(f"Cannot multiply matrices of incorrect dimensions, "
                                  f"self n ({self._dimensions[1]}) != other "
@@ -312,51 +311,73 @@ class Midi:
     pass
 
 
+class Identity(Matrix):
+    def __init__(self, x):
+        Matrix.__init__(self, m=x, n=x)
+        for i in range(x):
+            self[i][i] = 1
+    
+    
 class Fourier(Matrix):
     """Performs a fourier transform on one Matrix of time domain values and returns a Matrix of
     frequency domain values"""
 
     def __init__(self, matrix):
         Matrix.__init__(self, matrix)
+        self._p = math.log(matrix.get_dim()[0], 2) - 1
         self._omega_N = cmath.exp(-2 * math.pi * 1j / max(self._dimensions))
+        self.layer = self.get_dim()[0]
 
     def decompose(self):
         vector = self
         # This function wraps the vector in an unneeded pair of brackets
-        if math.log(vector.get_dim()[0], 2) > 2:
+        if math.log(vector.get_dim()[0], 2) > 1:
             even, odd = vector._contents[::2], vector._contents[1::2]
             even, odd = Matrix(even), Matrix(odd)
-            print(even, odd)
+            #print(even, odd)
             even, odd = Fourier.decompose(even), Fourier.decompose(odd)
-            return Matrix([[even], [odd]])
+            return Matrix([even, odd])
         else:
             return vector
-
+        
+    def get_p(self):
+        return self._p
+        
+    def get_omega(self):
+        return self._omega_N
+    
+    @staticmethod
+    def from_combine(mat, test):
+        temp = Fourier(Matrix(m=mat.get_dim()[0], n=mat.get_dim()[1]))
+        temp._contents = mat._contents
+        temp._p = test._p
+        temp._omega_N = test._omega_N
+        
+        return temp
+        
+        
+        
 
 if __name__ == "__main__":
-    # a = Wave("24nocturnea.wav")
-    # print(a.get_data()[0].get_dim(), a.get_data()[1].get_dim())
-    # b = Fourier(a.get_data()[0])
-    # print(b._omega_N)
-    # print(a.get_data()[0].get_dim())
-    A = Matrix([[3],[4],[6],[7],[8],[9],[0],[9]])
-    B = Fourier(A).decompose()
+#    a = Wave("24nocturnea.wav")
+#    print(a.get_data()[0].get_dim(), a.get_data()[1].get_dim())
+#    b = Fourier(a.get_data()[0])
+#    print(b._omega_N)
+#    print(a.get_data()[0].get_dim())
+#    final = b.decompose()
     
-    print(B)
+    test = Matrix([[i] for i in range(1, 33)])
+    test = Fourier(test)
     
-    test = Matrix([[Matrix([[1, 2, 5, 6], [3, 4, 6, 7], [1, 2, 5, 6], [3, 4, 6, 7]]),Matrix([[1, 2, 5, 6], [3, 4, 6, 7],[1, 2, 5, 6], 
-                              [3, 4, 6, 7]])],[Matrix([[1, 2, 5, 6], 
-                              [3, 4, 6, 7], 
-                              [1, 2, 5, 6], 
-                              [3, 4, 6, 7]]),Matrix([[1, 2, 5, 6], 
-                              [3, 4, 6, 7], 
-                              [1, 2, 5, 6], 
-                              [3, 4, 6, 7]])]])
+    A = test.decompose()
+    A = Fourier.from_combine(A, test)
+    print(A.get_p())
     
-    print("mat ", test.get_dim(), "vect ", B.get_dim())
-    C = test * B
-    print(type(C), type(C[0]), type(C[0][0]))
-    # B = Fourier.decompose(A) # Decomposistion is V broke
-    # print(B)
-    print(C)
-
+    #transform = Fourier.make_transform(A.get_omega(), A.get_p())
+    D = Identity(int(2**(A.get_p()-1)))
+    
+    for i in range(int(2**(A.get_p()-1))):
+        D[i][i] = A.get_omega() ** i
+        
+    a = Matrix([[Identity(2), -1 * D],[Identity(2), -1 * D]])
+    
