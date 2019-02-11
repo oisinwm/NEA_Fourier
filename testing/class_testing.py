@@ -1,5 +1,5 @@
 import math
-import matplotlib.pyplot
+# import matplotlib.pyplot
 import cmath
 
 
@@ -89,8 +89,7 @@ class Matrix:
     def __getitem__(self, key):
         if isinstance(key, int):
             return self._contents[key]
-        else:
-            raise KeyError
+        raise KeyError
 
     def __setitem__(self, key, value):
         # print(self._contents, key)
@@ -129,7 +128,7 @@ class Matrix:
     def __mul__(self, other):
         if isinstance(other, Identity):
             return Matrix(self)
-        elif isinstance(other, self.matrix_types):
+        if isinstance(other, self.matrix_types):
             if self._dimensions[1] != other._dimensions[0]:
                 raise ValueError(f"Cannot multiply matrices of incorrect dimensions, "
                                  f"self n ({self._dimensions[1]}) != other "
@@ -338,8 +337,7 @@ class Fourier(Matrix):
             #print(even, odd)
             even, odd = Fourier.decompose(even), Fourier.decompose(odd)
             return Fourier(Matrix([even, odd]))
-        else:
-            return vector
+        return vector
         
     def get_p(self):
         return int(self._p)
