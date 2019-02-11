@@ -359,10 +359,7 @@ class Fourier(Matrix):
             answer = factorVector * self
             DFT_result_list.append(answer[0][0])
             
-        print(DFT_result_list)
-        imag_list = [i.imag for i in DFT_result_list]
-        matplotlib.pyplot.plot(imag_list)
-        matplotlib.pyplot.show()
+        return Matrix([[i] for i in DFT_result_list])
     
     @staticmethod
     def from_combine(mat, test):
@@ -401,5 +398,11 @@ if __name__ == "__main__":
     Twiddle = Matrix([[Identity(A.get_p()-1), -1 * D],[Identity(A.get_p()-1), -1 * D]])
     
     a = Fourier(Matrix([[0],[1],[0],[0],[0],[0],[0],[0]]))
-    a.DFT()
+    res = a.DFT()
+    print(res)
+    
+    # All that is left here is the recursive DFT Loop and smashing it all back together
+    # Then I need to somehow workout what the results mean in terms of notes
+    # Then write the notes back into a midi file, bobs ur uncle and project over
+    
     
