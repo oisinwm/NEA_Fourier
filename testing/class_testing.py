@@ -333,10 +333,10 @@ class Fourier(Matrix):
         # This function wraps the vector in an unneeded pair of brackets
         if math.log(vector.get_dim()[0], 2) > 1:
             even, odd = vector._contents[::2], vector._contents[1::2]
-            even, odd = Matrix(even), Matrix(odd)
+            even, odd = Fourier(Matrix(even)), Fourier(Matrix(odd))
             #print(even, odd)
             even, odd = Fourier.decompose(even), Fourier.decompose(odd)
-            return Matrix([even, odd])
+            return Fourier(Matrix([even, odd]))
         else:
             return vector
         
