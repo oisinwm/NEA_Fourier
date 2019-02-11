@@ -324,7 +324,7 @@ class Fourier(Matrix):
 
     def __init__(self, matrix):
         Matrix.__init__(self, matrix)
-        self._p = math.log(matrix.get_dim()[0], 2) - 1
+        self._p = math.log(matrix.get_dim()[0], 2)
         self._omega_N = cmath.exp(-2 * math.pi * 1j / max(self._dimensions))
         self.layer = self.get_dim()[0]
 
@@ -341,7 +341,7 @@ class Fourier(Matrix):
             return vector
         
     def get_p(self):
-        return self._p
+        return int(self._p)
         
     def get_omega(self):
         return self._omega_N
@@ -350,7 +350,7 @@ class Fourier(Matrix):
     def from_combine(mat, test):
         temp = Fourier(Matrix(m=mat.get_dim()[0], n=mat.get_dim()[1]))
         temp._contents = mat._contents
-        temp._p = test._p
+        temp._p = int(test._p)
         temp._omega_N = test._omega_N
         
         return temp
@@ -366,12 +366,12 @@ if __name__ == "__main__":
 #    print(a.get_data()[0].get_dim())
 #    final = b.decompose()
     
-    test = Matrix([[i] for i in range(1, 33)])
+    test = Matrix([[i] for i in range(1, 9)])
     test = Fourier(test)
     
     A = test.decompose()
     A = Fourier.from_combine(A, test)
-    print(A.get_p())
+    print(A.get_omega())
     
     #transform = Fourier.make_transform(A.get_omega(), A.get_p())
     D = Identity(int(2**(A.get_p()-1)))
@@ -379,5 +379,7 @@ if __name__ == "__main__":
     for i in range(int(2**(A.get_p()-1))):
         D[i][i] = A.get_omega() ** i
         
-    a = Matrix([[Identity(2), -1 * D],[Identity(2), -1 * D]])
+    print(D)
+    Twiddle = Matrix([[Identity(A.get_p()-1), -1 * D],[Identity(A.get_p()-1), -1 * D]])
+    
     
