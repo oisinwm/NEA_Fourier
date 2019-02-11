@@ -407,5 +407,11 @@ if __name__ == "__main__":
     vector = Matrix([[C], [C]])    
     
     twiddle = Matrix([[Identity(2), -1*A],[Identity(2), -1*A]])
-    res = (twiddle * transform) * vector
+    res = (twiddle * transform) * vector # This is commutitve so thats good
     print(res, type(res), type(res[0]), type(res[0][0]), type(res[0][0][0]))
+    
+    test = Matrix([[i] for i in range(16)])
+    test = Fourier(test)
+    A = test.decompose()
+    print(A)
+    
