@@ -379,7 +379,8 @@ if __name__ == "__main__":
     for i in range(int(2**(A.get_p()-1))):
         D[i][i] = A.get_omega() ** i
         
-    print(D)
+    print(A)
+    print(type(A[0][0]))
     Twiddle = Matrix([[Identity(A.get_p()-1), -1 * D],[Identity(A.get_p()-1), -1 * D]])
     
     
