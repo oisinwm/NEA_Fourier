@@ -151,10 +151,8 @@ class Matrix:
                         result_matrix[i][c] = num
 
         elif isinstance(other, self.number_types):
-            # Scalar multiplication should be handled by rmul not mul,
-            # if here then an error has occurred
-            raise NotImplementedError("Scalar multiplication should be handled by rmul")
-        
+            result_matrix = self.__rmul__(other)
+            
         return result_matrix
 
     def __add__(self, other):
@@ -211,27 +209,27 @@ class Wave:
             raise TypeError("Specified file is not in wave format")
 
         fileSize = contents[4:8]
-        self.fileSize = int(self.little_bin(fileSize), 2)  # This correctly calculates filesize
+        self.fileSize = int(Wave.little_bin(fileSize), 2)  # This correctly calculates filesize
         headerChunk = contents[:12]
 
         fmtSizeRaw = contents[16:20]
-        fmtSize = int(self.little_bin(fmtSizeRaw), 2)
+        fmtSize = int(Wave.little_bin(fmtSizeRaw), 2)
         # formatChunk = contents[12:20+fmtSize]
         # bytes 12:16 'fmt '
         sampleRate = contents[24:26]
-        self.sampleRate = int(self.little_bin(sampleRate), 2)
+        self.sampleRate = int(Wave.little_bin(sampleRate), 2)
 
         channels = contents[22:24]
-        self.channels = int(self.little_bin(channels), 2)
+        self.channels = int(Wave.little_bin(channels), 2)
 
         frameSize = contents[32:34]
-        self.frameSize = int(self.little_bin(frameSize), 2)
+        self.frameSize = int(Wave.little_bin(frameSize), 2)
 
         bitDepth = contents[34:38]
-        self.bitDepth = int(self.little_bin(bitDepth), 2)
+        self.bitDepth = int(Wave.little_bin(bitDepth), 2)
         # bytes 38:42 'data'
         dataLen = contents[42:46]
-        self.dataLen = int(self.little_bin(dataLen), 2)
+        self.dataLen = int(Wave.little_bin(dataLen), 2)
 
         # Read in data from array
         self.frameStartIndex = 46  # Not 100% sure if should be hardcoded or dynamic
@@ -252,7 +250,7 @@ class Wave:
                 s = x * self.bitDepth // 8
                 e = (x + 1) * self.bitDepth // 8
                 channelData = data[s:e]
-                a = self.little_bin(channelData)
+                a = Wave.little_bin(channelData)
                 b = self.signed_int(a)
                 self.frameDataLists[x].append([b])
 
@@ -265,8 +263,9 @@ class Wave:
             for i in range(x):
                 sampleList.append([0])
         self.dataMatrices = [Matrix(sampleList) for sampleList in self.frameDataLists]
-
-    def little_bin(self, rawbytes):
+    
+    @staticmethod
+    def little_bin(rawbytes):
         """Returns the binary representation of an unsigned 32 bit integer,
             from little endian hex"""
         # print(rawbytes)
@@ -293,6 +292,7 @@ class Wave:
         elif self.bitDepth == 32:
             # Data is a float (-1.0f ro 1f)
             raise NotImplementedError("Cannot read 32 bit wave file yet")
+            return 0
 
     def get_data(self):
         return self.dataMatrices
@@ -379,28 +379,33 @@ if __name__ == "__main__":
 #    print(a.get_data()[0].get_dim())
 #    final = b.decompose()
     
-    test = Matrix([[i] for i in range(1, 9)])
-    test = Fourier(test)
-    
-    A = test.decompose()
-    A = Fourier.from_combine(A, test)
-    print(A.get_omega())
-    
-    #transform = Fourier.make_transform(A.get_omega(), A.get_p())
-    D = Identity(int(2**(A.get_p()-1)))
-    
-    for i in range(int(2**(A.get_p()-1))):
-        D[i][i] = A.get_omega() ** i
-        
-    print(A[0][0].get_dim()[0])
-    Twiddle = Matrix([[Identity(A.get_p()-1), -1 * D],[Identity(A.get_p()-1), -1 * D]])
-    
-    a = Fourier(Matrix([[0],[1],[0],[0],[0],[0],[0],[0]]))
-    res = a.DFT()
-    print(res)
+# =============================================================================
+#     test = Matrix([[i] for i in range(1, 9)])
+#     test = Fourier(test)
+#     
+#     A = test.decompose()
+#     A = Fourier.from_combine(A, test)
+#     print(A.get_omega())
+#     
+#     D = Identity(int(2**(A.get_p()-1)))
+#     
+#     for i in range(int(2**(A.get_p()-1))):
+#         D[i][i] = A.get_omega() ** i
+#         
+#     Twiddle = Matrix([[Identity(A.get_p()-1), -1 * D],[Identity(A.get_p()-1), -1 * D]])
+# =============================================================================
     
     # All that is left here is the recursive DFT Loop and smashing it all back together
     # Then I need to somehow workout what the results mean in terms of notes
-    # Then write the notes back into a midi file, bobs ur uncle and project over
+    # Then write the notes back into a midi file, bobs u r uncle and project over
     
+    A = Matrix([[1, 2], [4, 3]])
+    B = Matrix([[1, 2], [3, 4]])
+    C = Matrix([[5], [7]])
+
+    transform = Matrix([[A, 0], [0, B]])
+    vector = Matrix([[C], [C]])    
     
+    twiddle = Matrix([[Identity(2), -1*A],[Identity(2), -1*A]])
+    res = (twiddle * transform) * vector
+    print(res, type(res), type(res[0]), type(res[0][0]), type(res[0][0][0]))
