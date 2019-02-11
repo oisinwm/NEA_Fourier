@@ -1,4 +1,5 @@
 import math
+import matplotlib.pyplot
 import cmath
 
 
@@ -18,7 +19,7 @@ class Matrix:
         self._contents = []
         self._dimensions = [0, 0]
         self.number_types = (int, float, complex)
-        self.matrix_types = (Matrix, SquareMatrix)
+        self.matrix_types = (Matrix, SquareMatrix, Fourier, Identity)
         if len(args) == 0 and len(kwargs) == 2:
             # construct from a and b, if validation passes
             if kwargs.keys() == {"m": 0, "n": 0}.keys():
@@ -154,7 +155,7 @@ class Matrix:
             # Scalar multiplication should be handled by rmul not mul,
             # if here then an error has occurred
             raise NotImplementedError("Scalar multiplication should be handled by rmul")
-
+        
         return result_matrix
 
     def __add__(self, other):
@@ -325,7 +326,7 @@ class Fourier(Matrix):
     def __init__(self, matrix):
         Matrix.__init__(self, matrix)
         self._p = math.log(matrix.get_dim()[0], 2)
-        self._omega_N = cmath.exp(-2 * math.pi * 1j / max(self._dimensions))
+        self._omega_N = cmath.exp(-2 * math.pi * 1j / matrix.get_dim()[0])
         self.layer = self.get_dim()[0]
 
     def decompose(self):
@@ -345,6 +346,23 @@ class Fourier(Matrix):
         
     def get_omega(self):
         return self._omega_N
+    
+    def DFT(self):
+        N = self.get_dim()[0]
+        DFT_result_list = []
+        for x in range(N):
+            factor = []
+            for y in range(N):
+                factor.append(self._omega_N ** (x*y))
+            factorVector = Matrix(factor)
+            factorVector = (1 / N) * factorVector
+            answer = factorVector * self
+            DFT_result_list.append(answer[0][0])
+            
+        print(DFT_result_list)
+        imag_list = [i.imag for i in DFT_result_list]
+        matplotlib.pyplot.plot(imag_list)
+        matplotlib.pyplot.show()
     
     @staticmethod
     def from_combine(mat, test):
@@ -379,8 +397,9 @@ if __name__ == "__main__":
     for i in range(int(2**(A.get_p()-1))):
         D[i][i] = A.get_omega() ** i
         
-    print(A)
-    print(type(A[0][0]))
+    print(A[0][0].get_dim()[0])
     Twiddle = Matrix([[Identity(A.get_p()-1), -1 * D],[Identity(A.get_p()-1), -1 * D]])
     
+    a = Fourier(Matrix([[0],[1],[0],[0],[0],[0],[0],[0]]))
+    a.DFT()
     
