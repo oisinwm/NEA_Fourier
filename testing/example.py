@@ -24,14 +24,16 @@ def FFT(x):
     
     if N % 2 > 0:
         raise ValueError("size of x must be a power of 2")
-    elif N <= 32:  # this cutoff should be optimized
+    elif N <= 8:  # this cutoff should be optimized
         return DFT_slow(x)
     else:
         X_even = FFT(x[::2])
         X_odd = FFT(x[1::2])
-        factor = np.exp(-2j * np.pi * np.arange(N) / N)
-        return np.concatenate([X_even + factor[:N / 2] * X_odd,
-                               X_even + factor[N / 2:] * X_odd])
+        factor = np.exp(-2j * np.pi / N * np.arange(N))
+        print(X_even, factor[:N // 2], X_odd)
+        print(type(X_even), type(factor[:N // 2]), type(X_odd))
+        return np.concatenate([X_even + factor[:N // 2] * X_odd,
+                               X_even + factor[N // 2:] * X_odd])
     
     
 def FFT_vectorized(x):
@@ -66,5 +68,5 @@ def FFT_vectorized(x):
     return X.ravel()
 
 
-x = np.random.random(16)
-print(np.allclose(FFT_vectorized(x), np.fft.fft(x)))
+x = np.random.random(32)
+print(np.allclose(FFT(x), np.fft.fft(x)))

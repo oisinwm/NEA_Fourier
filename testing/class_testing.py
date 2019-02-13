@@ -192,6 +192,55 @@ class Matrix:
 
     def get_dim(self):
         return self._dimensions
+    
+    @staticmethod
+    def exp(x, lst):
+        result = []
+        for i in lst:
+            result += [cmath.exp(x * i)]
+        return Matrix([result])
+    
+    def concatanate(self, other, direction):
+        other_m, other_n = zip(other.get_dim())
+        other_m, other_n = other_m[0], other_n[0]
+        if not isinstance(other, self.matrix_types):
+            raise ValueError(f"unsupported type for concatinate: {type(other)}")
+        if direction in ["vertial", "v"]:
+            if not self.get_dim()[1] == other.get_dim()[1]:
+                raise ValueError
+            
+            result = Matrix(m=self.get_dim()[0] + other.get_dim()[0], 
+                            n=self.get_dim()[1])
+            
+            for y in range(self.get_dim()[0]):
+                for x in range(result.get_dim()[1]):
+                    result[y][x] = self[y][x]
+            
+            for y in range(self.get_dim()[0], result.get_dim()[0]):
+                for x in range(result.get_dim()[1]):
+                    result[y][x] = other[y-self.get_dim()[0]][x]
+            
+            return result
+        
+        elif direction in ["horizontal", "h"]:
+            if not self.get_dim()[0] == other.get_dim()[0]:
+                raise ValueError
+            
+            result = Matrix(m=self.get_dim()[0], 
+                            n=self.get_dim()[1]+ other.get_dim()[1])
+            
+            for x in range(self.get_dim()[1]):
+                for y in range(result.get_dim()[0]):
+                    result[y][x] = self[y][x]
+            
+            for x in range(self.get_dim()[1], result.get_dim()[1]):
+                for y in range(result.get_dim()[0]):
+                    result[y][x] = other[y][x-self.get_dim()[1]]
+            
+            return result
+        else:
+            raise ValueError
+            return 0
 
 
 class Wave:
@@ -296,7 +345,7 @@ class Wave:
 
     def get_data(self):
         return self.dataMatrices
-
+    
 
 class SquareMatrix(Matrix):
     """A n*n matrix class, a special instance of a Matrix that is square"""
@@ -327,18 +376,24 @@ class Fourier(Matrix):
         self._p = math.log(matrix.get_dim()[0], 2)
         self._omega_N = cmath.exp(-2 * math.pi * 1j / matrix.get_dim()[0])
         self.layer = self.get_dim()[0]
-
-    def decompose(self):
-        vector = self
-        # This function wraps the vector in an unneeded pair of brackets
-        if math.log(vector.get_dim()[0], 2) > 1:
+    
+    @staticmethod
+    def FFT(vector):
+        N = vector.get_dim()[0]
+        if N <= 2:
+            return vector.DFT()
+        else:
             even, odd = vector._contents[::2], vector._contents[1::2]
             even, odd = Fourier(Matrix(even)), Fourier(Matrix(odd))
-            #print(even, odd)
-            even, odd = Fourier.decompose(even), Fourier.decompose(odd)
-            return Fourier(Matrix([even, odd]))
-        return vector
-        
+            even, odd = Fourier.FFT(even), Fourier.FFT(odd)
+            
+            factor = Fourier.exp(-2j * math.pi / N, list(range(N)))
+            
+            first = even + Matrix(factor[0][:N // 2]) * odd
+            second = even + Matrix(factor[0][N // 2:]) * odd
+            
+            return Fourier(first.concatanate(second, "v"))
+
     def get_p(self):
         return int(self._p)
         
@@ -357,15 +412,14 @@ class Fourier(Matrix):
             answer = factorVector * self
             DFT_result_list.append(answer[0][0])
             
-        return Matrix([[i] for i in DFT_result_list])
-    
+        return Fourier(Matrix([[i] for i in DFT_result_list]))
+        
     @staticmethod
     def from_combine(mat, test):
         temp = Fourier(Matrix(m=mat.get_dim()[0], n=mat.get_dim()[1]))
         temp._contents = mat._contents
         temp._p = int(test._p)
         temp._omega_N = test._omega_N
-        
         return temp
         
         
@@ -398,20 +452,11 @@ if __name__ == "__main__":
     # All that is left here is the recursive DFT Loop and smashing it all back together
     # Then I need to somehow workout what the results mean in terms of notes
     # Then write the notes back into a midi file, bobs u r uncle and project over
+    test_data = Matrix([[0],[1],[0],[0],[0],[0],[0],[0]])
+    not_even_my_final_fourier = Fourier(test_data)
     
-    A = Matrix([[1, 2], [4, 3]])
-    B = Matrix([[1, 2], [3, 4]])
-    C = Matrix([[5], [7]])
-
-    transform = Matrix([[A, 0], [0, B]])
-    vector = Matrix([[C], [C]])    
-    
-    twiddle = Matrix([[Identity(2), -1*A],[Identity(2), -1*A]])
-    res = (twiddle * transform) * vector # This is commutitve so thats good
-    print(res, type(res), type(res[0]), type(res[0][0]), type(res[0][0][0]))
-    
-    test = Matrix([[i] for i in range(16)])
-    test = Fourier(test)
-    A = test.decompose()
-    print(A)
-    
+    a = not_even_my_final_fourier.DFT()    
+    b = not_even_my_final_fourier.DFT()
+    for i in range(a.get_dim()[0]):
+        string = f"{a[i][0]} VS {b[i][0]} \n"
+        print(string)
