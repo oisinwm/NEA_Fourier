@@ -5,7 +5,8 @@ Created on Mon Feb 11 19:57:42 2019
 @author: oisin
 """
 import numpy as np
-
+import time
+import random
 
 def DFT_slow(x):
     """Compute the discrete Fourier Transform of the 1D array x"""
@@ -30,8 +31,6 @@ def FFT(x):
         X_even = FFT(x[::2])
         X_odd = FFT(x[1::2])
         factor = np.exp(-2j * np.pi / N * np.arange(N))
-        print(X_even, factor[:N // 2], X_odd)
-        print(type(X_even), type(factor[:N // 2]), type(X_odd))
         return np.concatenate([X_even + factor[:N // 2] * X_odd,
                                X_even + factor[N // 2:] * X_odd])
     
@@ -51,9 +50,9 @@ def FFT_vectorized(x):
     # Perform an O[N^2] DFT on all length-N_min sub-problems at once
     n = np.arange(N_min)
     k = n[:, None]
-    print(k, type(k))
+    #print(k, type(k))
     M = np.exp(-2j * np.pi * n * k / N_min)
-    print(M, type(M))
+    #print(M, type(M))
     X = np.dot(M, x.reshape((N_min, -1)))
 
     # build-up each level of the recursive calculation all at once
@@ -67,6 +66,11 @@ def FFT_vectorized(x):
     
     return X.ravel()
 
+random.seed(10913)
 
-x = np.random.random(32)
-print(np.allclose(FFT(x), np.fft.fft(x)))
+lst = [random.randint(-1000, 1000) for i in range(2048)]
+x = np.array(lst)
+time_1 = time.time()
+y = FFT(x)
+time_2 = time.time()
+print(time_2 - time_1)

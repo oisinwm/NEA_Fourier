@@ -389,8 +389,12 @@ class Fourier(Matrix):
             
             factor = Fourier.exp(-2j * math.pi / N, list(range(N)))
             
-            first = even + Matrix(factor[0][:N // 2]) * odd
-            second = even + Matrix(factor[0][N // 2:]) * odd
+            first = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
+            second = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
+            
+            for i in range(even.get_dim()[0]):
+                first[i][0] = even[i][0] + factor[0][:N // 2][i] * odd[i][0]
+                second[i][0] = even[i][0] + factor[0][N // 2:][i] * odd[i][0]
             
             return Fourier(first.concatanate(second, "v"))
 
@@ -408,7 +412,7 @@ class Fourier(Matrix):
             for y in range(N):
                 factor.append(self._omega_N ** (x*y))
             factorVector = Matrix(factor)
-            factorVector = (1 / N) * factorVector
+            #factorVector = (1 / N) * factorVector
             answer = factorVector * self
             DFT_result_list.append(answer[0][0])
             
@@ -456,7 +460,7 @@ if __name__ == "__main__":
     not_even_my_final_fourier = Fourier(test_data)
     
     a = not_even_my_final_fourier.DFT()    
-    b = not_even_my_final_fourier.DFT()
+    b = Fourier.FFT(not_even_my_final_fourier)
     for i in range(a.get_dim()[0]):
         string = f"{a[i][0]} VS {b[i][0]} \n"
         print(string)
