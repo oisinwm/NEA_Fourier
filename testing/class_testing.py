@@ -1,7 +1,7 @@
 import math
-# import matplotlib.pyplot
+import matplotlib.pyplot
 import cmath
-
+import time, random
 
 class Matrix:
     """A  n*m matrix class, can be constructed from a list of objects or a 2d list of objects
@@ -267,7 +267,7 @@ class Wave:
         # bytes 12:16 'fmt '
         sampleRate = contents[24:26]
         self.sampleRate = int(Wave.little_bin(sampleRate), 2)
-
+        
         channels = contents[22:24]
         self.channels = int(Wave.little_bin(channels), 2)
 
@@ -276,14 +276,15 @@ class Wave:
 
         bitDepth = contents[34:38]
         self.bitDepth = int(Wave.little_bin(bitDepth), 2)
+        
         # bytes 38:42 'data'
         dataLen = contents[42:46]
-        self.dataLen = int(Wave.little_bin(dataLen), 2)
-
+        self.dataLen = int(Wave.little_bin(dataLen), 2) #This value is in bytes not bits
+        
         # Read in data from array
         self.frameStartIndex = 46  # Not 100% sure if should be hardcoded or dynamic
 
-        framesNum = self.dataLen / 8 / self.frameSize
+        framesNum = self.dataLen / self.frameSize
         if framesNum.is_integer():
             framesNum = int(framesNum)
         else:
@@ -305,12 +306,12 @@ class Wave:
 
         # Prepare lists for FFT
         self.dataMatrices = []
-        y = len(self.frameDataLists[0])
-        x = int(2 ** math.ceil(math.log(y, 2))) - y
+        # y = len(self.frameDataLists[0])
+        # x = int(2 ** math.ceil(math.log(y, 2))) - y
 
-        for sampleList in self.frameDataLists:
-            for i in range(x):
-                sampleList.append([0])
+        # for sampleList in self.frameDataLists:
+        #     for i in range(x):
+        #         sampleList.append([0])
         self.dataMatrices = [Matrix(sampleList) for sampleList in self.frameDataLists]
     
     @staticmethod
@@ -393,6 +394,9 @@ class Fourier(Matrix):
             second = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
             
             for i in range(even.get_dim()[0]):
+                print(f"odd: {odd.get_dim()}")
+                print(f"even: {even.get_dim()}")
+                print(i)
                 first[i][0] = even[i][0] + factor[0][:N // 2][i] * odd[i][0]
                 second[i][0] = even[i][0] + factor[0][N // 2:][i] * odd[i][0]
             
@@ -430,37 +434,36 @@ class Fourier(Matrix):
         
 
 if __name__ == "__main__":
-#    a = Wave("24nocturnea.wav")
-#    print(a.get_data()[0].get_dim(), a.get_data()[1].get_dim())
-#    b = Fourier(a.get_data()[0])
-#    print(b._omega_N)
-#    print(a.get_data()[0].get_dim())
-#    final = b.decompose()
-    
-# =============================================================================
-#     test = Matrix([[i] for i in range(1, 9)])
-#     test = Fourier(test)
-#     
-#     A = test.decompose()
-#     A = Fourier.from_combine(A, test)
-#     print(A.get_omega())
-#     
-#     D = Identity(int(2**(A.get_p()-1)))
-#     
-#     for i in range(int(2**(A.get_p()-1))):
-#         D[i][i] = A.get_omega() ** i
-#         
-#     Twiddle = Matrix([[Identity(A.get_p()-1), -1 * D],[Identity(A.get_p()-1), -1 * D]])
-# =============================================================================
+    a = Wave("24nocturnea.wav")
+    print(a.get_data()[0].get_dim(), a.get_data()[1].get_dim())
+    b = Fourier(Matrix(a.get_data()[0]))
+    print(b._omega_N)
+    print(a.get_data()[0].get_dim())
+    final = Fourier.FFT(b)
+    matplotlib.pyplot.plot([final[0][i] for i in final[0]])
+    matplotlib.pyplot.show()
+
     
     # All that is left here is the recursive DFT Loop and smashing it all back together
     # Then I need to somehow workout what the results mean in terms of notes
     # Then write the notes back into a midi file, bobs u r uncle and project over
-    test_data = Matrix([[0],[1],[0],[0],[0],[0],[0],[0]])
-    not_even_my_final_fourier = Fourier(test_data)
-    
-    a = not_even_my_final_fourier.DFT()    
-    b = Fourier.FFT(not_even_my_final_fourier)
-    for i in range(a.get_dim()[0]):
-        string = f"{a[i][0]} VS {b[i][0]} \n"
-        print(string)
+# =============================================================================
+#     random.seed(10913)
+#     
+#     xs = []
+#     ys = []
+#     for i in range(1, 18):
+#         lst = [[random.randint(-32768, 32768)] for i in range(2**i)]
+#         x = Fourier(Matrix(lst))
+#         time_1 = time.time()
+#         y = Fourier.FFT(x)
+#         time_2 = time.time()
+#         xs.append(2**i)
+#         ys.append(time_2-time_1)
+#     print(xs)
+#     print(ys)
+#     
+#     matplotlib.pyplot.plot(xs, ys)
+#     matplotlib.pyplot.show()
+# 
+# =============================================================================
