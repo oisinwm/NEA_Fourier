@@ -1,3 +1,4 @@
+import pickle
 import math
 import matplotlib.pyplot
 import cmath
@@ -94,7 +95,7 @@ class Matrix:
     def __setitem__(self, key, value):
         # print(self._contents, key)
         if isinstance(key, int):
-            if self._dimensions[1] >= key:
+            if self._dimensions[0] >= key:
                 self._contents[key] = value
             else:
                 raise KeyError
@@ -204,7 +205,7 @@ class Matrix:
         other_m, other_n = zip(other.get_dim())
         other_m, other_n = other_m[0], other_n[0]
         if not isinstance(other, self.matrix_types):
-            raise ValueError(f"unsupported type for concatinate: {type(other)}")
+            raise ValueError(f"unsupported type for concatanate: {type(other)}")
         if direction in ["vertial", "v"]:
             if not self.get_dim()[1] == other.get_dim()[1]:
                 raise ValueError
@@ -241,6 +242,24 @@ class Matrix:
         else:
             raise ValueError
             return 0
+        
+        
+    def section(self, mini, maxi, direction):
+        # Takes either a horizontal or vertical slice of the matrix between
+        # mini and maxi inclusive
+        if direction in ["vertial", "v"]:
+            result = Matrix(m=self.get_dim()[0], n=maxi-mini+1)
+            for i in range(result.get_dim()[0]):
+                result[i] = self[i][mini:(maxi+1)]
+        
+        elif direction in ["horizontal", "h"]:
+            result = Matrix(m=maxi-mini+1, n=self.get_dim()[1])
+            for i in range(result.get_dim()[0]):
+                result[i] = self[i+mini]
+        else:
+            raise ValueError(f"Incorrect direction for sectioning: {direction}")
+        
+        return result
 
 
 class Wave:
@@ -394,9 +413,6 @@ class Fourier(Matrix):
             second = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
             
             for i in range(even.get_dim()[0]):
-                print(f"odd: {odd.get_dim()}")
-                print(f"even: {even.get_dim()}")
-                print(i)
                 first[i][0] = even[i][0] + factor[0][:N // 2][i] * odd[i][0]
                 second[i][0] = even[i][0] + factor[0][N // 2:][i] * odd[i][0]
             
@@ -434,16 +450,29 @@ class Fourier(Matrix):
         
 
 if __name__ == "__main__":
-    a = Wave("24nocturnea.wav")
-    print(a.get_data()[0].get_dim(), a.get_data()[1].get_dim())
-    b = Fourier(Matrix(a.get_data()[0]))
-    print(b._omega_N)
-    print(a.get_data()[0].get_dim())
-    final = Fourier.FFT(b)
-    matplotlib.pyplot.plot([final[0][i] for i in final[0]])
-    matplotlib.pyplot.show()
-
+    filename = "24nocturnea.wav"
+    print(f"\nLoading begun on file '{filename}', this will take a while.\n")
     
+    try:
+        with open(filename + ".pickle", "rb") as file:
+            print("Cached file verison found!\n")
+            a = pickle.load(file)
+    except FileNotFoundError:
+        print("No cache found.\n")
+        a = Wave(filename)
+        with open(filename + ".pickle", "wb") as file:
+            pickle.dump(a, file, protocol=pickle.HIGHEST_PROTOCOL)
+    
+    print(a.get_data()[0].get_dim(), a.get_data()[1].get_dim())
+    b = Fourier(a.get_data()[0].section(0, (2**16)-1, "h"))
+    print(b._omega_N)
+    print(b.get_dim())
+    final = Fourier.FFT(b)
+    matplotlib.pyplot.plot([final[i][0] for i in range(final.get_dim()[0])])
+    matplotlib.pyplot.show()
+    
+    # time1=time.time();runfile('C:/Users/oisin/REPOS/NEA_Fourier/testing/class_testing.py', wdir='C:/Users/oisin/REPOS/NEA_Fourier/testing');time2=time.time();print(time2-time1)
+        
     # All that is left here is the recursive DFT Loop and smashing it all back together
     # Then I need to somehow workout what the results mean in terms of notes
     # Then write the notes back into a midi file, bobs u r uncle and project over
