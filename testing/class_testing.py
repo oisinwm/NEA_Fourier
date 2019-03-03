@@ -463,12 +463,12 @@ if __name__ == "__main__":
         with open(filename + ".pickle", "wb") as file:
             pickle.dump(a, file, protocol=pickle.HIGHEST_PROTOCOL)
     
-    print(a.get_data()[0].get_dim(), a.get_data()[1].get_dim())
+    print("Wave load complete.")
     b = Fourier(a.get_data()[0].section(0, (2**16)-1, "h"))
-    print(b._omega_N)
-    print(b.get_dim())
+    print("Fourier preparations complete.")
     final = Fourier.FFT(b)
-    matplotlib.pyplot.plot([final[i][0] for i in range(final.get_dim()[0])])
+    print("Fourier transform complete")
+    matplotlib.pyplot.plot([final[i][0].real for i in range(final.get_dim()[0]) if abs(final[i][0].real) < 0.25*10**9])
     matplotlib.pyplot.show()
     
     # time1=time.time();runfile('C:/Users/oisin/REPOS/NEA_Fourier/testing/class_testing.py', wdir='C:/Users/oisin/REPOS/NEA_Fourier/testing');time2=time.time();print(time2-time1)
