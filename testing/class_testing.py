@@ -452,6 +452,7 @@ class Fourier(Matrix):
 if __name__ == "__main__":
     filename = "24nocturnea.wav"
     print(f"\nLoading begun on file '{filename}', this will take a while.\n")
+    loadStartTime = time.time()
     
     try:
         with open(filename + ".pickle", "rb") as file:
@@ -462,12 +463,20 @@ if __name__ == "__main__":
         a = Wave(filename)
         with open(filename + ".pickle", "wb") as file:
             pickle.dump(a, file, protocol=pickle.HIGHEST_PROTOCOL)
+    loadEndTime = time.time()
     
-    print("Wave load complete.")
-    b = Fourier(a.get_data()[0].section(0, (2**16)-1, "h"))
-    print("Fourier preparations complete.")
+    print(f"Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
+    
+    prepareStartTime = time.time()
+    b = Fourier(a.get_data()[0].section(0, (2**17)-1, "h"))
+    prepareEndTime = time.time()
+    print(f"Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
+    
+    fourierStartTime = time.time()
     final = Fourier.FFT(b)
-    print("Fourier transform complete")
+    fourierEndTime = time.time()
+    print(f"Fourier transform complete. Elapsed time {fourierEndTime-fourierStartTime} seconds.")
+    
     matplotlib.pyplot.plot([final[i][0].real for i in range(final.get_dim()[0]) if abs(final[i][0].real) < 0.25*10**9])
     matplotlib.pyplot.show()
     
