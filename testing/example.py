@@ -66,11 +66,13 @@ def FFT_vectorized(x):
     
     return X.ravel()
 
+
 random.seed(10913)
 
-lst = [random.randint(-1000, 1000) for i in range(2048)]
+lst = [random.randint(-1000, 1000) for i in range(2**17)]
 x = np.array(lst)
 time_1 = time.time()
-y = FFT(x)
+y = np.fft.ifft(x)
 time_2 = time.time()
 print(time_2 - time_1)
+print(y[7865:7880])

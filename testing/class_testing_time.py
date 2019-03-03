@@ -397,7 +397,30 @@ class Fourier(Matrix):
                 second[i][0] = even[i][0] + factor[0][N // 2:][i] * odd[i][0]
             
             return Fourier(first.concatanate(second, "v"))
-
+        
+    @staticmethod
+    def IFFT(v):
+        """Not 100% correct, need to divide all final values by 1/N"""
+        
+        reverse = Matrix(m=v.get_dim()[0], n=v.get_dim()[1])
+        for i in range(v.get_dim()[0]):
+            if i == 0:
+                reverse[i][0] = v[i][0]
+            else:
+                reverse[i][0] = v[-i][0]
+        result = Fourier.FFT(reverse)
+        return result
+    
+    @staticmethod
+    def autocorrelation(vector):
+        # Wiener–Khinchin theorem
+        FR = Fourier.FFT(vector)
+        S = FR
+        for i in range(FR.get_dim()[0]):
+            S[i][0] = FR[i][0] * FR[i][0].conjugate()
+        R = (1/S.get_dim()[0]) * Fourier.IFFT(S)
+        return R
+        
     def get_p(self):
         return int(self._p)
         
@@ -427,8 +450,6 @@ class Fourier(Matrix):
         return temp
         
         
-        
-
 if __name__ == "__main__":
 #    a = Wave("24nocturnea.wav")
 #    print(a.get_data()[0].get_dim(), a.get_data()[1].get_dim())
@@ -458,9 +479,10 @@ if __name__ == "__main__":
     # Then write the notes back into a midi file, bobs u r uncle and project over
     random.seed(10913)
 
-    lst = [[random.randint(-10, 10)] for i in range(2**16)]
+    lst = [[random.randint(-1000, 1000)] for i in range(2**17)]
     x = Fourier(Matrix(lst))
     time_1 = time.time()
-    y = Fourier.FFT(x)
+    y = (1/x.get_dim()[0]) * Fourier.IFFT(x)
     time_2 = time.time()
     print(time_2 - time_1)
+    print(y._contents[7865:7880])

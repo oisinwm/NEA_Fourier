@@ -2,7 +2,8 @@ import pickle
 import math
 import matplotlib.pyplot
 import cmath
-import time, random
+import time
+import random
 
 class Matrix:
     """A  n*m matrix class, can be constructed from a list of objects or a 2d list of objects
@@ -417,7 +418,48 @@ class Fourier(Matrix):
                 second[i][0] = even[i][0] + factor[0][N // 2:][i] * odd[i][0]
             
             return Fourier(first.concatanate(second, "v"))
-
+        
+    @staticmethod
+    def IFFT(v):
+        """Not 100% correct, need to divide all final values by 1/N"""
+        def recur(vector):
+            N = vector.get_dim()[0]
+            if N <= 2:
+                return vector.DFT()
+            else:
+                even, odd = vector._contents[::2], vector._contents[1::2]
+                even, odd = Fourier(Matrix(even)), Fourier(Matrix(odd))
+                even, odd = recur(even), recur(odd)
+                
+                factor = Fourier.exp(-2j * math.pi / N, list(range(N)))
+                
+                first = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
+                second = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
+                
+                for i in range(even.get_dim()[0]):
+                    first[i][0] = even[i][0] + factor[0][:N // 2][i] * odd[i][0]
+                    second[i][0] = even[i][0] + factor[0][N // 2:][i] * odd[i][0]
+                return Fourier(first.concatanate(second, "v"))
+        
+        reverse = Matrix(m=v.get_dim()[0], n=v.get_dim()[1])
+        for i in range(v.get_dim()[0]):
+            if i == 0:
+                reverse[i][0] = v[i][0]
+            else:
+                reverse[i][0] = v[-i][0]
+        result = recur(reverse)
+        return result
+    
+    @staticmethod
+    def autocorrelation(vector):
+        # Wiener–Khinchin theorem
+        FR = Fourier.FFT(vector)
+        S = FR
+        for i in range(FR.get_dim()[0]):
+            S[i][0] = FR[i][0] * FR[i][0].conjugate()
+        R = (1/S.get_dim()[0]) * Fourier.IFFT(S)
+        return R
+        
     def get_p(self):
         return int(self._p)
         
@@ -465,21 +507,24 @@ if __name__ == "__main__":
             pickle.dump(a, file, protocol=pickle.HIGHEST_PROTOCOL)
     loadEndTime = time.time()
     
-    print(f"Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
+    print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
     prepareStartTime = time.time()
     b = Fourier(a.get_data()[0].section(0, (2**17)-1, "h"))
     prepareEndTime = time.time()
-    print(f"Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
+    print(f"* Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
     
     fourierStartTime = time.time()
-    final = Fourier.FFT(b)
+    final = Fourier.autocorrelation(b)
     fourierEndTime = time.time()
-    print(f"Fourier transform complete. Elapsed time {fourierEndTime-fourierStartTime} seconds.")
+    print(f"* Fourier transforms complete. Elapsed time {fourierEndTime-fourierStartTime} seconds.")
     
-    matplotlib.pyplot.plot([final[i][0].real for i in range(final.get_dim()[0]) if abs(final[i][0].real) < 0.25*10**9])
+    with open("output.pickle", "wb") as file:
+        pickle.dump(final, file, protocol=pickle.HIGHEST_PROTOCOL)
+    
+    matplotlib.pyplot.plot([final[i][0].real for i in range(final.get_dim()[0]//2)])
     matplotlib.pyplot.show()
-    
+    print(f"\nTotal elpased time {fourierEndTime-loadStartTime}")
     # time1=time.time();runfile('C:/Users/oisin/REPOS/NEA_Fourier/testing/class_testing.py', wdir='C:/Users/oisin/REPOS/NEA_Fourier/testing');time2=time.time();print(time2-time1)
         
     # All that is left here is the recursive DFT Loop and smashing it all back together
