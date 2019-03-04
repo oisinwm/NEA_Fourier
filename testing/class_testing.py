@@ -421,34 +421,15 @@ class Fourier(Matrix):
         
     @staticmethod
     def IFFT(v):
-        """Not 100% correct, need to divide all final values by 1/N"""
-        def recur(vector):
-            N = vector.get_dim()[0]
-            if N <= 2:
-                return vector.DFT()
-            else:
-                even, odd = vector._contents[::2], vector._contents[1::2]
-                even, odd = Fourier(Matrix(even)), Fourier(Matrix(odd))
-                even, odd = recur(even), recur(odd)
-                
-                factor = Fourier.exp(-2j * math.pi / N, list(range(N)))
-                
-                first = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
-                second = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
-                
-                for i in range(even.get_dim()[0]):
-                    first[i][0] = even[i][0] + factor[0][:N // 2][i] * odd[i][0]
-                    second[i][0] = even[i][0] + factor[0][N // 2:][i] * odd[i][0]
-                return Fourier(first.concatanate(second, "v"))
-        
+        """Not 100% correct, need to divide all final values by 1/N"""        
         reverse = Matrix(m=v.get_dim()[0], n=v.get_dim()[1])
         for i in range(v.get_dim()[0]):
             if i == 0:
                 reverse[i][0] = v[i][0]
             else:
                 reverse[i][0] = v[-i][0]
-        result = recur(reverse)
-        return result
+        result = Fourier.FFT(reverse)
+        return (1/v.get_dim()[0]) * result
     
     @staticmethod
     def autocorrelation(vector):
@@ -457,7 +438,7 @@ class Fourier(Matrix):
         S = FR
         for i in range(FR.get_dim()[0]):
             S[i][0] = FR[i][0] * FR[i][0].conjugate()
-        R = (1/S.get_dim()[0]) * Fourier.IFFT(S)
+        R = Fourier.IFFT(S)
         return R
         
     def get_p(self):
@@ -510,7 +491,7 @@ if __name__ == "__main__":
     print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
     prepareStartTime = time.time()
-    b = Fourier(a.get_data()[0].section(0, (2**17)-1, "h"))
+    b = Fourier(a.get_data()[0].section(0, (2**16)-1, "h"))
     prepareEndTime = time.time()
     print(f"* Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
     
