@@ -4,6 +4,8 @@ import matplotlib.pyplot
 import cmath
 import time
 import random
+import sys
+
 
 class Matrix:
     """A  n*m matrix class, can be constructed from a list of objects or a 2d list of objects
@@ -294,44 +296,34 @@ class Wave:
         frameSize = contents[32:34]
         self.frameSize = int(Wave.little_bin(frameSize), 2)
 
-        bitDepth = contents[34:38]
+        bitDepth = contents[34:36]
         self.bitDepth = int(Wave.little_bin(bitDepth), 2)
         
-        # bytes 38:42 'data'
-        dataLen = contents[42:46]
-        self.dataLen = int(Wave.little_bin(dataLen), 2) #This value is in bytes not bits
+        # bytes 36:40 = "data"
+        dataLen = contents[40:44]
+        self.dataLen = int(Wave.little_bin(dataLen), 2) 
         
         # Read in data from array
-        self.frameStartIndex = 46  # Not 100% sure if should be hardcoded or dynamic
-
+        self.frameStartIndex = 44  # Not 100% sure if should be hardcoded or dynamic, mostly sure its constant
+        
         framesNum = self.dataLen / self.frameSize
         if framesNum.is_integer():
             framesNum = int(framesNum)
         else:
             raise ValueError("Non integer frame number")
-
-        # print(framesNum)
+        
         self.frameDataLists = [[] for i in range(self.channels)]
-        for frame in range(framesNum - 1):
+        for frame in range(framesNum):
             start = self.frameStartIndex + frame * self.frameSize
             end = self.frameStartIndex + (frame + 1) * self.frameSize
             data = contents[start:end]
-            for x in range(self.channels):
-                s = x * self.bitDepth // 8
-                e = (x + 1) * self.bitDepth // 8
-                channelData = data[s:e]
-                a = Wave.little_bin(channelData)
-                b = self.signed_int(a)
-                self.frameDataLists[x].append([b])
+            if not len(data) == self.channels * self.bitDepth // 8:
+                raise ValueError("Invalid bit depth")
+            n = self.bitDepth // 8
+            samples = [data[i:i+n] for i in range(0, len(data), n)]
+            for i in range(self.channels):
+                self.frameDataLists[i].append([self.signed_int(samples[i])])
 
-        # Prepare lists for FFT
-        self.dataMatrices = []
-        # y = len(self.frameDataLists[0])
-        # x = int(2 ** math.ceil(math.log(y, 2))) - y
-
-        # for sampleList in self.frameDataLists:
-        #     for i in range(x):
-        #         sampleList.append([0])
         self.dataMatrices = [Matrix(sampleList) for sampleList in self.frameDataLists]
     
     @staticmethod
@@ -353,16 +345,17 @@ class Wave:
     def signed_int(self, rawbytes):
         """Returns the integer representation of a signed integer,
             from binary"""
-        if self.bitDepth == 8:
-            # Data is unsigned 8 bit integer (-128 to 127)
-            return int(rawbytes, 2)
-        elif self.bitDepth == 16:
-            # Data is signed 16 bit integer (-32768 to 32768)
-            return -32768 + int(rawbytes[1:], 2)
+        if self.bitDepth == 8 or self.bitDepth == 16:
+            binary = Wave.little_bin(rawbytes)
+            if binary[0] == "1":
+                res = -32768 + int(Wave.little_bin(rawbytes)[1:], 2)
+            else:
+                res = int(Wave.little_bin(rawbytes), 2)
+            return res
+        
         elif self.bitDepth == 32:
             # Data is a float (-1.0f ro 1f)
             raise NotImplementedError("Cannot read 32 bit wave file yet")
-            return 0
 
     def get_data(self):
         return self.dataMatrices
@@ -475,8 +468,9 @@ class Fourier(Matrix):
 if __name__ == "__main__":
     filename = "24nocturnea.wav"
     print(f"\nLoading begun on file '{filename}', this will take a while.\n")
-    loadStartTime = time.time()
     
+    
+    loadStartTime = time.time()
     try:
         with open(filename + ".pickle", "rb") as file:
             print("Cached file verison found!\n")
@@ -487,47 +481,21 @@ if __name__ == "__main__":
         with open(filename + ".pickle", "wb") as file:
             pickle.dump(a, file, protocol=pickle.HIGHEST_PROTOCOL)
     loadEndTime = time.time()
-    
     print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
     prepareStartTime = time.time()
-    b = Fourier(a.get_data()[0].section(0, (2**16)-1, "h"))
+    b = Fourier(a.get_data()[0].section(0, (2**15)-1, "h"))
     prepareEndTime = time.time()
     print(f"* Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
     
+    
     fourierStartTime = time.time()
-    final = Fourier.autocorrelation(b)
+    final = Fourier.FFT(b)
     fourierEndTime = time.time()
     print(f"* Fourier transforms complete. Elapsed time {fourierEndTime-fourierStartTime} seconds.")
     
-    with open("output.pickle", "wb") as file:
-        pickle.dump(final, file, protocol=pickle.HIGHEST_PROTOCOL)
     
-    matplotlib.pyplot.plot([final[i][0].real for i in range(final.get_dim()[0]//2)])
+    matplotlib.pyplot.plot([final[i][0].real if abs(final[i][0]) < 2000 else 0 for i in range(final.get_dim()[0]//2)])
     matplotlib.pyplot.show()
     print(f"\nTotal elpased time {fourierEndTime-loadStartTime}")
-    # time1=time.time();runfile('C:/Users/oisin/REPOS/NEA_Fourier/testing/class_testing.py', wdir='C:/Users/oisin/REPOS/NEA_Fourier/testing');time2=time.time();print(time2-time1)
-        
-    # All that is left here is the recursive DFT Loop and smashing it all back together
-    # Then I need to somehow workout what the results mean in terms of notes
-    # Then write the notes back into a midi file, bobs u r uncle and project over
-# =============================================================================
-#     random.seed(10913)
-#     
-#     xs = []
-#     ys = []
-#     for i in range(1, 18):
-#         lst = [[random.randint(-32768, 32768)] for i in range(2**i)]
-#         x = Fourier(Matrix(lst))
-#         time_1 = time.time()
-#         y = Fourier.FFT(x)
-#         time_2 = time.time()
-#         xs.append(2**i)
-#         ys.append(time_2-time_1)
-#     print(xs)
-#     print(ys)
-#     
-#     matplotlib.pyplot.plot(xs, ys)
-#     matplotlib.pyplot.show()
-# 
-# =============================================================================
+
