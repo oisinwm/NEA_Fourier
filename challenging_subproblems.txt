@@ -1,2 +1,12 @@
-Reading in wave file(figuring out byte offsets with signed little endian ints)
+Wave File Reader (figuring out byte offsets with signed little endian ints and extracting samples)
+
+Matrix Operations: add/substract, multiply/divide, concatination, sectioning
+
+Discrete Fourier Transform
+
+Recursive Fast Fourier Transform
+
+Peak Finding Algorithm
+
+Midi File writer
 

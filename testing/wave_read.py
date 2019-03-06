@@ -7,35 +7,52 @@ Created on Mon Mar  4 21:49:20 2019
 
 import matplotlib.pyplot as plt
 import numpy as np
-import wave
-import sys
+import pickle
+import math
 
 
-spf = wave.open('24nocturnea.wav','r')
-
-#Extract Raw Audio from Wav File
-signal = spf.readframes(-1)
-signal = np.fromstring(signal, 'Int16')
+filename = "24nocturnea.wav"
+with open(filename + ".pickle", "rb") as file:
+    a = pickle.load(file)
 
 
-#If Stereo
-if spf.getnchannels() == 2:
-    left = signal[::2]
-    right = signal[1::2]
+def sample(amp, freq, x):
+        return amp * math.sin(freq*x*2*math.pi) #+ amp/2 * math.sin(freq*x*math.pi)
 
-    print(left.size, spf.getnframes())
-    plt.figure(1)
-    plt.title('Signal Wave Right...')
-    plt.plot(right[:2**5])
-    plt.show()
-    
-    plt.figure(2)
-    plt.title('Signal Wave Left...')
-    plt.plot(left[:2**5])
-    plt.show()
-else:
-    plt.figure(1)
-    plt.title('Signal Wave Full...')
-    plt.plot(signal[:2**5])
-    plt.show()
-# Data begins at offset 3C
+def generate_test_matrix(frequency, samplerate, length):
+    """Given a frequency(Hz), samplerate(Hz) and length(s) returns a matrix of the samples that
+    sound would create, if it were a recording of sound from a wave file."""
+    amplitude = 4500
+
+    sample_list = []
+    for y in range(int(length*samplerate)):
+        # x is the integer part of time, y is the decimal
+        x = y // samplerate
+        t = x + (y/samplerate)
+
+        samp = sample(amplitude, frequency, t)
+        sample_list.append(samp)
+        
+
+    return sample_list
+
+
+x = [i[0] for i in a.get_data()[0].section(33075, 55125, "h")._contents]
+
+y = generate_test_matrix(1000, 44100, 0.125)
+
+plt.plot(x)
+plt.show()
+
+res = np.fft.fft(x)
+#res = np.ma.masked_where(abs(res) > 9000, res)
+res = abs(res)
+res = res[:res.size//2]
+np.savetxt("foo.csv", res, delimiter=",")
+
+plt.plot(res)
+plt.show()
+
+for i in range(res.size):
+    if res[i] > 0.2*10**(7):
+        print(i, res[i])
