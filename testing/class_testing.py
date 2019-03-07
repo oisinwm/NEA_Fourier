@@ -361,6 +361,20 @@ class Wave:
     def get_data(self):
         return self.dataMatrices
     
+    def convert_hertz(self, vector):
+        """Converts a fourier transform output index to its value in Hz"""
+        N = vector.get_dim()[0]
+        T = N /self.sampleRate
+        df = 1/T
+        result = Matrix(m=N, n=1)
+        for n in range(N):
+            if n < N/2:
+                result[n][0] = df*n
+            else:
+                result[n][0] = df*(n-N)
+        return result
+        
+    
 
 class SquareMatrix(Matrix):
     """A n*n matrix class, a special instance of a Matrix that is square"""
@@ -529,45 +543,38 @@ if __name__ == "__main__":
         a = Wave(filename)
         with open(filename + ".pickle", "wb") as file:
             pickle.dump(a, file, protocol=pickle.HIGHEST_PROTOCOL)
-#    loadEndTime = time.time()
-#    print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
-#    
-#    prepareStartTime = time.time()
-#    b = Fourier(a.get_data()[0].section(33075, (55125)-1, "h"), pad=True)
-#    prepareEndTime = time.time()
-#    print(f"* Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
-#    
-#    
-#    fourierStartTime = time.time()
-#    final = Fourier.FFT(b)
-#    fourierEndTime = time.time()
-#    print(f"* Fourier transforms complete. Elapsed time {fourierEndTime-fourierStartTime} seconds.")
-#    
-#    
-#    matplotlib.pyplot.plot([abs(final[i][0]) for i in range(final.get_dim()[0]//2)])
-#    matplotlib.pyplot.show()
-#    
-#    results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
-#    peaks = [i[0] for i in Fourier.find_peaks(results, 30, 5, 0.1)._contents]
-#    for i in range(len(peaks)):
-#        if peaks[i] != 0:
-#            print(i)
-#    matplotlib.pyplot.plot(peaks)
-#    matplotlib.pyplot.show()
-#    print(f"\nTotal elpased time {fourierEndTime-loadStartTime}")
-    lst = random.choices(list(range(-15000,15000)), k=3**10)
-    np_res = np.fft.fft(lst)
-    my_res = Fourier.FFT(Fourier(Matrix([[i] for i in lst]),pad=True))
-    my_res_lst = [i[0] for i in my_res._contents]
+
+    loadEndTime = time.time()
+    print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
-    print(len(np_res), len(my_res_lst))
+    prepareStartTime = time.time()
+    b = Fourier(a.get_data()[0].section(27807, (60575)-1, "h"), pad=True)
+    prepareEndTime = time.time()
+    print(f"* Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
     
-    matplotlib.pyplot.plot(np_res)
-    matplotlib.pyplot.show()
-    matplotlib.pyplot.plot(my_res_lst)
+    
+    fourierStartTime = time.time()
+    final = Fourier.FFT(b) # Once transform is complete the values must be converted to hz
+    fourierEndTime = time.time()
+    print(f"* Fourier transforms complete. Elapsed time {fourierEndTime-fourierStartTime} seconds.")
+    
+    resultStartTime = time.time()
+    conversion_vector = a.convert_hertz(final) # HO BOI, use this to look up fr
+    
+    results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
+    peaks = [i[0] for i in Fourier.find_peaks(results, 30, 6, 0.1)._contents]
+    
+    matplotlib.pyplot.plot([abs(final[i][0]) for i in range(final.get_dim()[0]//2)])
     matplotlib.pyplot.show()
     
-    #First note is A# or B octave 5 ~935Hz
+    results = []
+    for i in range(len(peaks)):
+        if peaks[i] != 0 and i > 100:
+            results.append(i)
+            
+    matplotlib.pyplot.plot(peaks)
+    matplotlib.pyplot.show()
     
-    print(f"\nAll Close: {np.allclose(np_res, my_res_lst)}\n")
+    print(f"\nTotal elpased time {fourierEndTime-loadStartTime}")
+    print(results)
 

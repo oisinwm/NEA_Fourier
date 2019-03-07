@@ -37,15 +37,24 @@ def generate_test_matrix(frequency, samplerate, length):
     return sample_list
 
 
-x = [i[0] for i in a.get_data()[0].section(33075, (55125)-1, "h")._contents]
+x = [i[0] for i in a.get_data()[0].section(27807, (60575)-1, "h")._contents]
 
 y = generate_test_matrix(1000, 44100, 0.125)
 
-plt.plot(x)
+plt.plot(y)
 plt.show()
 
-res = np.fft.fft(x)
+res = np.fft.fft(y)
 #res = np.ma.masked_where(abs(res) > 9000, res)
+N = res.size
+dt = 1/44100
+T = dt*N
+df = 1/T
+dw = df * 2 * math.pi
+ny = dw * N / 2
+w = np.array([df*n if n<N/2 else df*(n-N) for n in range(N)])
+
+
 res = abs(res)
 res = res[:res.size//2]
 np.savetxt("foo.csv", res, delimiter=",")
