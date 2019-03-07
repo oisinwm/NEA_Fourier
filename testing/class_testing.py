@@ -530,7 +530,7 @@ class Fourier(Matrix):
 
 if __name__ == "__main__":
     filename = "24nocturnea.wav"
-    print(f"\nLoading begun on file '{filename}', this will take a while.\n")
+    print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
     
     
     loadStartTime = time.time()
@@ -560,6 +560,8 @@ if __name__ == "__main__":
     
     resultStartTime = time.time()
     conversion_vector = a.convert_hertz(final) # HO BOI, use this to look up fr
+    resultEndTime = time.time()
+    print(f"* Conversion vector constructed. Elapsed time {resultEndTime-resultStartTime} seconds.")
     
     results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
     peaks = [i[0] for i in Fourier.find_peaks(results, 30, 6, 0.1)._contents]
@@ -575,6 +577,6 @@ if __name__ == "__main__":
     matplotlib.pyplot.plot(peaks)
     matplotlib.pyplot.show()
     
-    print(f"\nTotal elpased time {fourierEndTime-loadStartTime}")
+    print(f"\nTotal elpased time {resultEndTime-loadStartTime}")
     print(results)
 
