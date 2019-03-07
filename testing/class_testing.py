@@ -5,6 +5,7 @@ import cmath
 import time
 import random
 import sys
+import numpy as np
 
 
 class Matrix:
@@ -388,12 +389,16 @@ class Fourier(Matrix):
     def __init__(self, matrix, pad=False):
         Matrix.__init__(self, matrix)
         self._p = math.ceil(math.log(matrix.get_dim()[0], 2))
+        
         if pad:
             length = 2**self._p - matrix.get_dim()[0]
-            self._contents = self.concatanate(Matrix(m=length, n=1), "v")._contents
+            if length > 0:
+                left = math.ceil(length/2)
+                right = length//2
+                self._contents = Matrix(m=left, n=1).concatanate(self, "v").concatanate(Matrix(m=right, n=1), "v")._contents
             self._dimensions[0] = 2**self._p
-            print(2**self._p, self.get_dim(), len(self._contents))
-        self._omega_N = cmath.exp(-2 * math.pi * 1j / self.get_dim()[0])
+        
+        self._omega_N = cmath.exp(-2j * math.pi / self.get_dim()[0])
         
     def get_p(self):
         return int(self._p)
@@ -524,32 +529,45 @@ if __name__ == "__main__":
         a = Wave(filename)
         with open(filename + ".pickle", "wb") as file:
             pickle.dump(a, file, protocol=pickle.HIGHEST_PROTOCOL)
-    loadEndTime = time.time()
-    print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
+#    loadEndTime = time.time()
+#    print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
+#    
+#    prepareStartTime = time.time()
+#    b = Fourier(a.get_data()[0].section(33075, (55125)-1, "h"), pad=True)
+#    prepareEndTime = time.time()
+#    print(f"* Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
+#    
+#    
+#    fourierStartTime = time.time()
+#    final = Fourier.FFT(b)
+#    fourierEndTime = time.time()
+#    print(f"* Fourier transforms complete. Elapsed time {fourierEndTime-fourierStartTime} seconds.")
+#    
+#    
+#    matplotlib.pyplot.plot([abs(final[i][0]) for i in range(final.get_dim()[0]//2)])
+#    matplotlib.pyplot.show()
+#    
+#    results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
+#    peaks = [i[0] for i in Fourier.find_peaks(results, 30, 5, 0.1)._contents]
+#    for i in range(len(peaks)):
+#        if peaks[i] != 0:
+#            print(i)
+#    matplotlib.pyplot.plot(peaks)
+#    matplotlib.pyplot.show()
+#    print(f"\nTotal elpased time {fourierEndTime-loadStartTime}")
+    lst = random.choices(list(range(-15000,15000)), k=3**10)
+    np_res = np.fft.fft(lst)
+    my_res = Fourier.FFT(Fourier(Matrix([[i] for i in lst]),pad=True))
+    my_res_lst = [i[0] for i in my_res._contents]
     
-    prepareStartTime = time.time()
-    b = Fourier(a.get_data()[0].section(33075, (55125)-1, "h"), pad=True)
-    prepareEndTime = time.time()
-    print(f"* Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
+    print(len(np_res), len(my_res_lst))
     
-    
-    fourierStartTime = time.time()
-    final = Fourier.FFT(b)
-    fourierEndTime = time.time()
-    print(f"* Fourier transforms complete. Elapsed time {fourierEndTime-fourierStartTime} seconds.")
-    
-    
-    matplotlib.pyplot.plot([abs(final[i][0]) for i in range(final.get_dim()[0]//2)])
+    matplotlib.pyplot.plot(np_res)
+    matplotlib.pyplot.show()
+    matplotlib.pyplot.plot(my_res_lst)
     matplotlib.pyplot.show()
     
-    results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
-    peaks = [i[0] for i in Fourier.find_peaks(results, 30, 5, 0.1)._contents]
-    for i in range(len(peaks)):
-        if peaks[i] != 0:
-            print(i)
-    matplotlib.pyplot.plot(peaks)
-    matplotlib.pyplot.show()
-    print(f"\nTotal elpased time {fourierEndTime-loadStartTime}")
+    #First note is A# or B octave 5 ~935Hz
     
-    #First note is A# or B octave 5
+    print(f"\nAll Close: {np.allclose(np_res, my_res_lst)}\n")
 
