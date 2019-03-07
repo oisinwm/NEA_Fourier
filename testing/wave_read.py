@@ -37,7 +37,7 @@ def generate_test_matrix(frequency, samplerate, length):
     return sample_list
 
 
-x = [i[0] for i in a.get_data()[0].section(33075, 55125, "h")._contents]
+x = [i[0] for i in a.get_data()[0].section(33075, 1, "h")._contents]
 
 y = generate_test_matrix(1000, 44100, 0.125)
 

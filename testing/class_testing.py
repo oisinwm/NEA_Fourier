@@ -385,11 +385,75 @@ class Fourier(Matrix):
     """Performs a fourier transform on one Matrix of time domain values and returns a Matrix of
     frequency domain values"""
 
-    def __init__(self, matrix):
+    def __init__(self, matrix, pad=False):
         Matrix.__init__(self, matrix)
-        self._p = math.log(matrix.get_dim()[0], 2)
-        self._omega_N = cmath.exp(-2 * math.pi * 1j / matrix.get_dim()[0])
-        self.layer = self.get_dim()[0]
+        self._p = math.ceil(math.log(matrix.get_dim()[0], 2))
+        if pad:
+            length = 2**self._p - matrix.get_dim()[0]
+            self._contents = self.concatanate(Matrix(m=length, n=1), "v")._contents
+            self._dimensions[0] = 2**self._p
+            print(2**self._p, self.get_dim(), len(self._contents))
+        self._omega_N = cmath.exp(-2 * math.pi * 1j / self.get_dim()[0])
+        
+    def get_p(self):
+        return int(self._p)
+        
+    def get_omega(self):
+        return self._omega_N
+    
+    def DFT(self):
+        N = self.get_dim()[0]
+        DFT_result_list = []
+        for x in range(N):
+            factor = []
+            for y in range(N):
+                factor.append(self._omega_N ** (x*y))
+            factorVector = Matrix(factor)
+            #factorVector = (1 / N) * factorVector
+            answer = factorVector * self
+            DFT_result_list.append(answer[0][0])
+            
+        return Fourier(Matrix([[i] for i in DFT_result_list]))
+    
+    @staticmethod
+    def find_peaks(vector, lag, threshold, influence):
+        """Algorithim from https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362"""
+        signals = Matrix(m=vector.get_dim()[0], n=1)
+        filteredY = vector
+        avgFilter = Matrix(m=vector.get_dim()[0], n=1)
+        stdFilter = Matrix(m=vector.get_dim()[0], n=1)
+        avgFilter[lag-1] = Fourier.avg(vector.section(0, lag-1, "h"))
+        stdFilter[lag-1] = Fourier.std(vector.section(0, lag-1, "h"))
+        
+        for i in range(lag+1, vector.get_dim()[0]):
+            if abs(vector[i][0] - avgFilter[i-1][0]) > threshold * stdFilter[i-1][0]:
+                if vector[i][0] > avgFilter[i-1][0]:
+                    signals[i][0] = 1
+                else:
+                    signals[i][0] = -1
+                
+                filteredY[i][0] = influence*vector[i][0] + (1-influence)*filteredY[i-1][0]
+            else:
+                signals[i][0] = 0
+                filteredY[i][0] = vector[i][0]
+            
+            avgFilter[i][0] = Fourier.avg(filteredY.section(i-lag, i, "h"))
+            stdFilter[i][0] = Fourier.std(filteredY.section(i-lag, i, "h"))
+        
+        return signals 
+                
+        
+    @staticmethod
+    def avg(vector):
+        n = vector.get_dim()[0]
+        total = sum([i[0] for i in vector._contents])
+        return total / n
+    
+    @staticmethod
+    def std(vector):
+        n = vector.get_dim()[0]
+        total = sum([i[0]**2 for i in vector._contents])
+        return math.sqrt(total / n - Fourier.avg(vector)**2)
     
     @staticmethod
     def FFT(vector):
@@ -433,27 +497,7 @@ class Fourier(Matrix):
             S[i][0] = FR[i][0] * FR[i][0].conjugate()
         R = Fourier.IFFT(S)
         return R
-        
-    def get_p(self):
-        return int(self._p)
-        
-    def get_omega(self):
-        return self._omega_N
     
-    def DFT(self):
-        N = self.get_dim()[0]
-        DFT_result_list = []
-        for x in range(N):
-            factor = []
-            for y in range(N):
-                factor.append(self._omega_N ** (x*y))
-            factorVector = Matrix(factor)
-            #factorVector = (1 / N) * factorVector
-            answer = factorVector * self
-            DFT_result_list.append(answer[0][0])
-            
-        return Fourier(Matrix([[i] for i in DFT_result_list]))
-        
     @staticmethod
     def from_combine(mat, test):
         temp = Fourier(Matrix(m=mat.get_dim()[0], n=mat.get_dim()[1]))
@@ -484,7 +528,7 @@ if __name__ == "__main__":
     print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
     prepareStartTime = time.time()
-    b = Fourier(a.get_data()[0].section(0, (2**15)-1, "h"))
+    b = Fourier(a.get_data()[0].section(33075, (55125)-1, "h"), pad=True)
     prepareEndTime = time.time()
     print(f"* Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
     
@@ -495,7 +539,17 @@ if __name__ == "__main__":
     print(f"* Fourier transforms complete. Elapsed time {fourierEndTime-fourierStartTime} seconds.")
     
     
-    matplotlib.pyplot.plot([final[i][0].real if abs(final[i][0]) < 2000 else 0 for i in range(final.get_dim()[0]//2)])
+    matplotlib.pyplot.plot([abs(final[i][0]) for i in range(final.get_dim()[0]//2)])
+    matplotlib.pyplot.show()
+    
+    results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
+    peaks = [i[0] for i in Fourier.find_peaks(results, 30, 5, 0.1)._contents]
+    for i in range(len(peaks)):
+        if peaks[i] != 0:
+            print(i)
+    matplotlib.pyplot.plot(peaks)
     matplotlib.pyplot.show()
     print(f"\nTotal elpased time {fourierEndTime-loadStartTime}")
+    
+    #First note is A# or B octave 5
 
