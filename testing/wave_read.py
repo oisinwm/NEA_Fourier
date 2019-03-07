@@ -37,7 +37,7 @@ def generate_test_matrix(frequency, samplerate, length):
     return sample_list
 
 
-x = [i[0] for i in a.get_data()[0].section(33075, 1, "h")._contents]
+x = [i[0] for i in a.get_data()[0].section(33075, (55125)-1, "h")._contents]
 
 y = generate_test_matrix(1000, 44100, 0.125)
 
@@ -53,6 +53,11 @@ np.savetxt("foo.csv", res, delimiter=",")
 plt.plot(res)
 plt.show()
 
-for i in range(res.size):
-    if res[i] > 0.2*10**(7):
-        print(i, res[i])
+vector_res = Matrix([[i] for i in res])
+peaks = [i[0] for i in Fourier.find_peaks(vector_res, 30, 5, 0.1)._contents]
+for i in range(len(peaks)):
+    if peaks[i] != 0:
+        print(i)
+
+plt.plot(peaks)
+plt.show()
