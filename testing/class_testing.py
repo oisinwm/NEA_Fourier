@@ -459,8 +459,18 @@ class Fourier(Matrix):
             avgFilter[i][0] = Fourier.avg(filteredY.section(i-lag, i, "h"))
             stdFilter[i][0] = Fourier.std(filteredY.section(i-lag, i, "h"))
         
-        return signals 
-                
+        return signals
+    
+    @staticmethod
+    def filter_peaks(lst):
+        lst = list(lst)
+        result_list = []
+        while len(lst) > 1:
+            temp = [[lst.pop(0)]]
+            while len(lst) > 0 and abs(Fourier.avg(Matrix(temp)) - lst[0]) < 2*len(temp) and len(lst) > 0:
+                temp.append([lst.pop(0)])
+            result_list.append(int(Fourier.avg(Matrix(temp))))
+        return result_list
         
     @staticmethod
     def avg(vector):
@@ -548,7 +558,7 @@ if __name__ == "__main__":
     print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
     prepareStartTime = time.time()
-    b = Fourier(a.get_data()[0].section(27807, (60575)-1, "h"), pad=True)
+    b = Fourier(a.get_data()[0].section(60575, (93343)-1, "h"), pad=True)
     prepareEndTime = time.time()
     print(f"* Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
     
@@ -564,19 +574,21 @@ if __name__ == "__main__":
     print(f"* Conversion vector constructed. Elapsed time {resultEndTime-resultStartTime} seconds.")
     
     results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
-    peaks = [i[0] for i in Fourier.find_peaks(results, 30, 6, 0.1)._contents]
+    peak_pos = [i[0] for i in Fourier.find_peaks(results, 30, 6, 0.1)._contents]
+    raw_peak_values = []
+    for i in range(100, len(peak_pos)):
+        if peak_pos[i]:
+            print(raw_peak_values)
+            raw_peak_values += [i]
+    filtered_peaks = Fourier.filter_peaks(raw_peak_values)
+    hz_values = [conversion_vector[i][0] for i in filtered_peaks]
     
     matplotlib.pyplot.plot([abs(final[i][0]) for i in range(final.get_dim()[0]//2)])
     matplotlib.pyplot.show()
     
-    results = []
-    for i in range(len(peaks)):
-        if peaks[i] != 0 and i > 100:
-            results.append(i)
             
-    matplotlib.pyplot.plot(peaks)
+    matplotlib.pyplot.plot(peak_pos)
     matplotlib.pyplot.show()
     
     print(f"\nTotal elpased time {resultEndTime-loadStartTime}")
-    print(results)
 
