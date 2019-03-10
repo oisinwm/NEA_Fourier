@@ -6,6 +6,7 @@ import time
 import random
 import sys
 import numpy as np
+import json
 
 
 class Matrix:
@@ -306,7 +307,7 @@ class Wave:
         
         # Read in data from array
         self.frameStartIndex = 44  # Not 100% sure if should be hardcoded or dynamic, mostly sure its constant
-        
+        print(self.dataLen, self.frameSize)
         framesNum = self.dataLen / self.frameSize
         if framesNum.is_integer():
             framesNum = int(framesNum)
@@ -465,9 +466,9 @@ class Fourier(Matrix):
     def filter_peaks(lst):
         lst = list(lst)
         result_list = []
-        while len(lst) > 1:
+        while len(lst) > 0:
             temp = [[lst.pop(0)]]
-            while len(lst) > 0 and abs(Fourier.avg(Matrix(temp)) - lst[0]) < 2*len(temp) and len(lst) > 0:
+            while len(lst) > 0 and abs(Fourier.avg(Matrix(temp)) - lst[0]) < 6*len(temp):
                 temp.append([lst.pop(0)])
             result_list.append(int(Fourier.avg(Matrix(temp))))
         return result_list
@@ -539,56 +540,54 @@ class Fourier(Matrix):
         
 
 if __name__ == "__main__":
-    filename = "24nocturnea.wav"
+    filename = "ffmpeg.wav"
     print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
     
     
     loadStartTime = time.time()
     try:
-        with open(filename + ".pickle", "rb") as file:
+        with open(filename[:-4] + ".pickle", "rb") as file:
             print("Cached file verison found!\n")
             a = pickle.load(file)
     except FileNotFoundError:
         print("No cache found.\n")
         a = Wave(filename)
-        with open(filename + ".pickle", "wb") as file:
+        with open(filename[:-4] + ".pickle", "wb") as file:
             pickle.dump(a, file, protocol=pickle.HIGHEST_PROTOCOL)
 
     loadEndTime = time.time()
     print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
-    prepareStartTime = time.time()
-    b = Fourier(a.get_data()[0].section(60575, (93343)-1, "h"), pad=True)
-    prepareEndTime = time.time()
-    print(f"* Fourier preparations complete. Elapsed time {prepareEndTime-prepareStartTime} seconds.")
+    FOURIER_INCREMENT = 512
+    FOURIER_SIZE = 4096
     
     
+    results_dict = {}
     fourierStartTime = time.time()
-    final = Fourier.FFT(b) # Once transform is complete the values must be converted to hz
+    for offset in range(int(a.get_data()[0].get_dim()[0]-8) // FOURIER_INCREMENT):
+        b = Fourier(a.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
+        #Shortest note appears to be 0.012 seconds long, bin number of 512
+        
+        final = Fourier.FFT(b) # Once transform is complete the values must be converted to hz
+        conversion_vector = a.convert_hertz(final) # HO BOI, use this to look up fr
+        
+        results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
+        peak_pos = [i[0] for i in Fourier.find_peaks(results, 30, 6, 0.1)._contents]
+        raw_peak_values = []
+        for i in range(0, len(peak_pos)):
+            if peak_pos[i]:
+                raw_peak_values += [i]
+        
+        filtered_peaks = Fourier.filter_peaks(raw_peak_values)
+        hz_values = [conversion_vector[i][0] for i in filtered_peaks]
+        filtereds_hz_values = [h for h in Fourier.filter_peaks(hz_values) if h not in [333, 4026]]
+
+        results_dict[offset*FOURIER_INCREMENT] = list(filtereds_hz_values)
+    
     fourierEndTime = time.time()
-    print(f"* Fourier transforms complete. Elapsed time {fourierEndTime-fourierStartTime} seconds.")
+    print(f"* Fourier complete. Elapsed time {fourierEndTime-loadStartTime} seconds.")
+    with open(filename[:-4] + "_test.txt", "w") as file:
+        file.write(json.dumps(results_dict).replace("], ","],\n"))
+
     
-    resultStartTime = time.time()
-    conversion_vector = a.convert_hertz(final) # HO BOI, use this to look up fr
-    resultEndTime = time.time()
-    print(f"* Conversion vector constructed. Elapsed time {resultEndTime-resultStartTime} seconds.")
-    
-    results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
-    peak_pos = [i[0] for i in Fourier.find_peaks(results, 30, 6, 0.1)._contents]
-    raw_peak_values = []
-    for i in range(100, len(peak_pos)):
-        if peak_pos[i]:
-            print(raw_peak_values)
-            raw_peak_values += [i]
-    filtered_peaks = Fourier.filter_peaks(raw_peak_values)
-    hz_values = [conversion_vector[i][0] for i in filtered_peaks]
-    
-    matplotlib.pyplot.plot([abs(final[i][0]) for i in range(final.get_dim()[0]//2)])
-    matplotlib.pyplot.show()
-    
-            
-    matplotlib.pyplot.plot(peak_pos)
-    matplotlib.pyplot.show()
-    
-    print(f"\nTotal elpased time {resultEndTime-loadStartTime}")
 
