@@ -3,9 +3,6 @@ import math
 import matplotlib.pyplot
 import cmath
 import time
-import random
-import sys
-import numpy as np
 import json
 
 
@@ -451,8 +448,8 @@ class Fourier(Matrix):
                     signals[i][0] = 1
                 else:
                     signals[i][0] = -1
-                
                 filteredY[i][0] = influence*vector[i][0] + (1-influence)*filteredY[i-1][0]
+                
             else:
                 signals[i][0] = 0
                 filteredY[i][0] = vector[i][0]
@@ -540,9 +537,8 @@ class Fourier(Matrix):
         
 
 if __name__ == "__main__":
-    filename = "ffmpeg.wav"
+    filename = "24nocturnea.wav"
     print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
-    
     
     loadStartTime = time.time()
     try:
@@ -560,7 +556,6 @@ if __name__ == "__main__":
     
     FOURIER_INCREMENT = 512
     FOURIER_SIZE = 4096
-    
     
     results_dict = {}
     fourierStartTime = time.time()
@@ -588,6 +583,8 @@ if __name__ == "__main__":
     print(f"* Fourier complete. Elapsed time {fourierEndTime-loadStartTime} seconds.")
     with open(filename[:-4] + "_test.txt", "w") as file:
         file.write(json.dumps(results_dict).replace("], ","],\n"))
+                            
+    
 
     
 

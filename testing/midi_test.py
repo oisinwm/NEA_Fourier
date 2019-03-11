@@ -4,6 +4,9 @@ Created on Sun Mar 10 17:51:45 2019
 
 @author: oisin
 """
+import json
+import math
+
 
 class Midi:
     """A representation of a midi file,
@@ -15,13 +18,13 @@ class Midi:
         self.events = [(0,0)]
         
     def hz_to_key(self, hz):
-        return "3c"
+        return hex(int(69 + 12 * math.log(int(hz)/440, 2)))[2:]
     
     def velocity_to_hex(self, v):
         return "40"
     
     def sample_to_tick(self, sample):
-        return int(sample // (44100 / (2*self.division))) # Fix hardcoding
+        return int(int(sample) // (44100 / (2*self.division))) # Fix hardcoding
     
     def add_note(self, start_sample, end_sample, note, velocity, channel=0):
         # At 120 BPM, 1s = 2b
@@ -48,7 +51,6 @@ class Midi:
             if index != 0: # Empty event to begin 
                 track_data += delta_vlq[index-1] + event[1]
         
-        #track_data += "00FF510307A12000FF7F0A53616D706C697475646500FF03084D49444920524543".lower()
         track_data += "19ff2f0000ff2f00" # End of track event
         
         #prepare track header
@@ -76,8 +78,41 @@ class Midi:
         hex_result = [hex(int(binary_str[i:i + 4],2))[2:] for i in range(0, len(binary_str), 4)]
         return "".join(hex_result)
         
+    
 if __name__ == "__main__":
-    a = Midi()
-    a.add_note(750,44100,0,0)
-    a.add_note(30000,88000,0,0)
-    a.write("first.mid")
+    FOURIER_INCREMENT = 512
+    FOURIER_SIZE = 4096
+    
+    midi_file = Midi()
+    
+    with open("24nocturnea_test.txt", "r") as file:
+        results_dict = json.loads(file.read())
+    
+    v = 0
+    error = 0
+    start_t = 0
+    end_t = 0
+    for key, value in results_dict.items():
+        if int(key) < 512*5000000000:
+            if len(value) > 3:
+                if value[0] in list(range(int(v-error),int(v+error))):
+                    v = (v+value[0])/2
+                else:
+                    end_t = key
+                    if v != 0:
+                        midi_file.add_note(start_t, end_t, v, 40)
+                    v = value[0]
+                    print(f"\nnew note {v} hz at key {key}")
+                    start_t = key
+                error = v/30
+                count = 1
+                for i, num in enumerate(value):
+                    if (i+1) * v in list(range(int(num-(i+1)*error), int(num+(i+1)*error))):
+                        count +=1
+                print(f"strength {count}")
+    
+    midi_file.write("full_test.mid")
+            
+            
+            
+            
