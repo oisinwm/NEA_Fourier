@@ -537,7 +537,7 @@ class Fourier(Matrix):
         
 
 if __name__ == "__main__":
-    filename = "24nocturnea.wav"
+    filename = "blind.wav"
     print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
     
     loadStartTime = time.time()
@@ -582,7 +582,7 @@ if __name__ == "__main__":
     
     fourierEndTime = time.time()
     print(f"* Fourier complete. Elapsed time {fourierEndTime-loadStartTime} seconds.")
-    with open(filename[:-4] + "2_test.txt", "w") as file:
+    with open(filename[:-4] + "_test.txt", "w") as file:
         file.write(json.dumps(results_dict).replace("], ","],\n"))
                             
     

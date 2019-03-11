@@ -32,8 +32,9 @@ class Midi:
         # 230 samples per tick
         note_on = "9" + hex(channel)[2:] + self.hz_to_key(note) + self.velocity_to_hex(velocity)
         note_off = "8" + hex(channel)[2:] + self.hz_to_key(note) + "40"
-        self.events.append((self.sample_to_tick(start_sample), note_on))
-        self.events.append((self.sample_to_tick(end_sample), note_off))
+        if int(end_sample) - int(start_sample) > 2800:
+            self.events.append((self.sample_to_tick(start_sample), note_on))
+            self.events.append((self.sample_to_tick(end_sample), note_off))
         
     def write(self, filename):
         # Prepare file header
@@ -85,7 +86,7 @@ if __name__ == "__main__":
     
     midi_file = Midi()
     
-    with open("24nocturnea_test.txt", "r") as file:
+    with open("blind_test.txt", "r") as file:
         results_dict = json.loads(file.read())
     
     v = 0
@@ -111,7 +112,7 @@ if __name__ == "__main__":
                         count +=1
                 print(f"strength {count}")
     
-    midi_file.write("full_test.mid")
+    midi_file.write("amy_test.mid")
             
             
             
