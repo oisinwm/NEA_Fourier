@@ -86,7 +86,7 @@ if __name__ == "__main__":
     
     midi_file = Midi()
     
-    with open("blind_test.txt", "r") as file:
+    with open("blind_test.json", "r") as file:
         results_dict = json.loads(file.read())
     
     v = 0
@@ -94,26 +94,24 @@ if __name__ == "__main__":
     start_t = 0
     end_t = 0
     for key, value in results_dict.items():
-        if int(key) < 512*5000000000:
-            if len(value) > 3:
-                if value[0] in list(range(int(v-error),int(v+error))):
-                    v = (v+value[0])/2
-                else:
-                    end_t = key
-                    if v != 0:
-                        midi_file.add_note(start_t, end_t, v, 40)
-                    v = value[0]
-                    print(f"\nnew note {v} hz at key {key}")
-                    start_t = key
-                error = v/30
-                count = 1
-                for i, num in enumerate(value):
-                    if (i+1) * v in list(range(int(num-(i+1)*error), int(num+(i+1)*error))):
-                        count +=1
-                print(f"strength {count}")
+        if len(value) > 3:
+            if value[0] in list(range(int(v-error),int(v+error))):
+                v = (v+value[0])/2
+            else:
+                end_t = key
+                if v != 0:
+                    midi_file.add_note(start_t, end_t, v, 40)
+                v = value[0]
+                print(f"\nnew note {v} hz at key {key}")
+                start_t = key
+            error = v/30
+            count = 1
+            for i, num in enumerate(value):
+                if (i+1) * v in list(range(int(num-(i+1)*error), int(num+(i+1)*error))):
+                    count +=1
+            print(f"strength {count}")
     
-    midi_file.write("amy_test.mid")
+    midi_file.write("blind_mice.mid")
             
-            
-            
+
             

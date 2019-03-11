@@ -1,261 +1,88 @@
-import math
+import json
+import pickle
+import time
+
+from classes import Matrix, Fourier, Wave, Midi
+
+import matplotlib.pylot as plt
 
 
-class Matrix:
-    """A  n*m matrix class, can be constructed from a list of objects or a 2d list of objects
-        e.g.
-        a = Matrix([[1,2], [3,4]])
-        a = Matrix(m=10, n=10)
-        Methods:
-            __init__
-            __rmul__
-            __add__
-            __sub__
-    """
 
-    def __init__(self, *args, **kwargs):
-        self._contents = []
-        self._dimensions = [0, 0]
-        if len(args) == 0 and len(kwargs) == 2:
-            # construct from a and b, if validation passes
-            if kwargs.keys() == {"m": 0, "n": 0}.keys():
-                if isinstance(kwargs["m"], int) and isinstance(kwargs["n"], int):
-                    if kwargs["m"] > 0 and kwargs["n"] > 0:
-                        # construct
-                        self._dimensions = [kwargs["m"], kwargs["n"]]
-                        self._contents = [[0 for x in range(kwargs["n"])] for y in
-                                          range(kwargs["m"])]
-                    else:
-                        raise TypeError("Matrix dimension cannot be less than 0")
+filename = "blind.wav"
+print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
 
-                else:
-                    raise TypeError(f"""Invalid type for dimensions: 
-                                    [{type(kwargs['m'])}, {type(kwargs['n'])}]""")
+loadStartTime = time.time()
+try:
+    with open(filename[:-4] + ".pickle", "rb") as file:
+        print("Cached file verison found!\n")
+        a = pickle.load(file)
+except FileNotFoundError:
+    print("No cache found.\n")
+    a = Wave(filename)
+    with open(filename[:-4] + ".pickle", "wb") as file:
+        pickle.dump(a, file, protocol=pickle.HIGHEST_PROTOCOL)
 
-            else:
-                raise TypeError(f"""Invalid kwargs {kwargs} must be 'm' and 'n'""")
+loadEndTime = time.time()
+print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
 
-        elif len(args) == 1 and len(kwargs) == 0:
-            # construct from values
-            if isinstance(args[0], list):
-                if len(args[0]) > 0:
-                    # Can construct from list of objects OR
-                    # List of lists of objects
-                    if isinstance(args[0][0], list):
-                        n = len(args[0][0])
-                        # print(args, args[0], type(args), type(args[0]))
-                        for x in range(len(args[0])):
-                            if not isinstance(args[0][x], list):
-                                raise TypeError(""""Invalid values for Matrix, 
-                                                must be only of type list""")
-                            for y in args[0][x]:
-                                if isinstance(y, list):
-                                    raise TypeError(""""Invalid values for 2D Matrix, 
-                                                    must not be list""")
-                                if len(args[0][x]) != n:
-                                    raise TypeError(""""Invalid values for 2D Matrix, 
-                                                        must not of equal width""")
-                        # At this point, valid list of lists
-                        self._contents = args[0]
-                        self._dimensions = [len(args[0]), len(args[0][0])]
+FOURIER_INCREMENT = 512
+FOURIER_SIZE = 4096
 
-                    else:
-                        # At this point a 1D list is detected
-                        for x in args[0]:
-                            if isinstance(x, list):
-                                raise TypeError(""""Invalid values for Matrix, 
-                                                must be only of type: list""")
-                        self._dimensions = [1, len(args[0])]
-                        self._contents = [list(args[0])]
-            else:
-                raise TypeError(f"""Invalid type for Matrix: {type(args[0])}, must be list""")
 
+results_dict = {}
+fourierStartTime = time.time()
+#for offset in range(130):
+for offset in range((int(a.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
+    b = Fourier(a.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
+    #Shortest note appears to be 0.012 seconds long, bin number of 512
+    
+    final = Fourier.FFT(b) # Once transform is complete the values must be converted to hz
+    conversion_vector = a.convert_hertz(final) # HO BOI, use this to look up from a conversion table to get hz
+    
+    results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
+    peak_pos = [i[0] for i in Fourier.find_peaks(results, 30, 6, 0.1)._contents]
+    raw_peak_values = []
+    for i in range(0, len(peak_pos)):
+        if peak_pos[i]:
+            raw_peak_values += [i]
+    
+    filtered_peaks = Fourier.filter_peaks(raw_peak_values)
+    hz_values = [conversion_vector[i][0] for i in filtered_peaks]
+    filtereds_hz_values = [h for h in Fourier.filter_peaks(hz_values) if h not in [333, 4026]]
+
+    results_dict[offset*FOURIER_INCREMENT] = list(filtereds_hz_values)
+
+fourierEndTime = time.time()
+print(f"* Fourier complete. Elapsed time {fourierEndTime-loadStartTime} seconds.")
+
+with open(filename[:-4] + "_test.json", "w") as file:
+    file.write(json.dumps(results_dict).replace("], ","],\n"))
+
+with open("blind_test.json", "r") as file:
+    results_dict = json.loads(file.read())
+
+midi_file = Midi()
+
+v = 0
+error = 0
+start_t = 0
+end_t = 0
+for key, value in results_dict.items():
+    if len(value) > 3:
+        if value[0] in list(range(int(v-error),int(v+error))):
+            v = (v+value[0])/2
         else:
-            # don't construct, incorrect information given
-            raise TypeError(f"""Invalid input length for Matrix: {type(args)}, 
-                                must be exactly 1 list""")
+            end_t = key
+            if v != 0:
+                midi_file.add_note(start_t, end_t, v, 40)
+            v = value[0]
+            print(f"\nnew note {v} hz at key {key}")
+            start_t = key
+        error = v/30
+        count = 1
+        for i, num in enumerate(value):
+            if (i+1) * v in list(range(int(num-(i+1)*error), int(num+(i+1)*error))):
+                count +=1
+        print(f"strength {count}")
 
-    def __getitem__(self, key):
-        if isinstance(key, int):
-            return self._contents[key]
-        else:
-            raise KeyError
-
-    def __setitem__(self, key, value):
-        # print(self._contents, key)
-        if isinstance(key, int):
-            if self._dimensions[1] >= key:
-                self._contents[key] = value
-            else:
-                raise KeyError
-        else:
-            raise KeyError
-
-    def __repr__(self):
-        return str(self._contents)
-
-    def __rmul__(self, other):
-        number_types = (int, float, complex)
-        matrix_types = (Matrix, SquareMatrix)
-        result_matrix = self
-
-        if isinstance(other, number_types):
-            result_matrix = Matrix(m=self._dimensions[0], n=self._dimensions[1])
-            for y in range(len(self._contents)):
-                if isinstance(self[0], list):
-                    for x in range(len(self[y])):
-                        result_matrix[y][x] = self[y][x] * other
-                else:
-                    # in this case a 1d matrix
-                    result_matrix[y] = self[y] * other
-
-        elif isinstance(other, matrix_types):
-            # Matrix multiplication should be handled by mul not rmul,
-            #  if being found here then an error has occurred
-            raise NotImplementedError("Matrix multiplication should be handled by rmul")
-
-        return result_matrix
-
-    def __mul__(self, other):
-        number_types = (int, float, complex)
-        matrix_types = (Matrix, SquareMatrix)
-        result_matrix = self
-
-        if isinstance(other, matrix_types):
-            # AB = C
-            # self other = result_matrix
-            if self._dimensions[1] != other._dimensions[0]:
-                raise ValueError(f"Cannot multiply matrices of incorrect dimensions, "
-                                 f"self n ({self._dimensions[1]}) != other "
-                                 f"m ({other.get_dim()[0]})")
-            else:
-                # Multiply two matrices with the correct dimensions
-                x = self._dimensions[0]
-                y = other.get_dim()[1]
-                result_matrix = Matrix(m=x, n=y)
-
-                for i in range(self._dimensions[0]):
-                    for c in range(other.get_dim()[1]):
-                        num = 0
-                        for j in range(other.get_dim()[0]):
-                            num += self[i][j] * other[j][c]
-                        result_matrix[i][c] = num
-
-        elif isinstance(other, number_types):
-            # Scalar multiplication should be handled by rmul not mul,
-            # if being found here then an error has occurred
-            raise NotImplementedError("Scalar multiplication should be handled by rmul")
-
-        return result_matrix
-
-    def get_dim(self):
-        return self._dimensions
-
-
-class SquareMatrix(Matrix):
-    """A n*n matrix class, a special instance of a Matrix that is square"""
-    def __init__(self):
-        Matrix.__init__(self)
-
-
-class Wave:
-    """A representation of a Wave file, must be created from a string containing the location of a
-     wave file on disk"""
-    def __init__(self, path):
-        with open(path, "rb") as raw_wave_file:
-            contents = raw_wave_file.read()
-
-        # Check the header chunk for correctly set values
-        # https://blogs.msdn.microsoft.com/dawate/2009/06/23/intro-to-audio-programming-part-2-demystifying-the-wav-format/
-        # The above article is nicely formatted but has a bunch of mistakes
-        if contents[0:4] != b"RIFF" or contents[8:12] != b"WAVE":
-            raise TypeError("Specified file is not in wave format")
-
-        fileSize = contents[4:8]
-        self.fileSize = int(self.little_bin(fileSize), 2)  # This correctly calculates filesize
-        headerChunk = contents[:12]
-
-        fmtSizeRaw = contents[16:20]
-        fmtSize = int(self.little_bin(fmtSizeRaw), 2)
-        # formatChunk = contents[12:20+fmtSize]
-        # bytes 12:16 'fmt '
-        sampleRate = contents[24:26]
-        self.sampleRate = int(self.little_bin(sampleRate), 2)
-
-        channels = contents[22:24]
-        self.channels = int(self.little_bin(channels), 2)
-
-        frameSize = contents[32:34]
-        self.frameSize = int(self.little_bin(frameSize), 2)
-
-        bitDepth = contents[34:38]
-        self.bitDepth = int(self.little_bin(bitDepth), 2)
-        # bytes 38:42 'data'
-        dataLen = contents[42:46]
-        self.dataLen = int(self.little_bin(dataLen), 2)
-
-        # Read in data from array
-        self.frameStartIndex = 46  # Not 100% sure if should be hardcoded or dynamic
-
-        framesNum = self.dataLen / 8 / self.frameSize
-        if framesNum.is_integer():
-            framesNum = int(framesNum)
-        else:
-            raise ValueError("Non integer frame number")
-
-        # print(framesNum)
-        self.frameDataLists = [[] for i in range(self.channels)]
-        for frame in range(framesNum-1):
-            start = self.frameStartIndex + frame * self.frameSize
-            end = self.frameStartIndex + (frame+1) * self.frameSize
-            data = contents[start:end]
-            for x in range(self.channels):
-                s = x * self.bitDepth // 8
-                e = (x + 1) * self.bitDepth // 8
-                channelData = data[s:e]
-                a = self.little_bin(channelData)
-                b = self.signed_int(a)
-                self.frameDataLists[x].append([b])
-
-        # Prepare lists for FFT
-        self.dataMatrices = []
-        y = len(self.frameDataLists[0])
-        x = int(2 ** math.ceil(math.log(y, 2))) - y
-        for sampleList in self.frameDataLists:
-            for i in range(x):
-                sampleList.append([0])
-            self.dataMatrices.append(Matrix(sampleList))
-
-    def little_bin(self, rawbytes):
-        """Returns the binary representation of an unsigned 32 bit integer,
-            from little endian hex"""
-        # print(rawbytes)
-        bytez = []
-        for i in rawbytes:
-            bytez.append(hex(i)[2:].zfill(2))
-        hexstr = "".join(bytez[::-1])
-        # at this point need a string of raw hex digits only
-        result = ""
-        for x in hexstr:
-            digits = bin(int(x, 16))[2:].zfill(4)
-            result += digits
-
-        return result
-
-    def signed_int(self, rawbytes):
-        """Returns the integer representation of a signed integer,
-            from binary"""
-        if self.bitDepth == 8:
-            # Data is unsigned 8 bit integer (-128 to 127)
-            return int(rawbytes, 2)
-        elif self.bitDepth == 16:
-            # Data is signed 16 bit integer (-32768 to 32768)
-            return -32768 + int(rawbytes[1:], 2)
-        elif self.bitDepth == 32:
-            # Data is a float (-1.0f ro 1f)
-            raise NotImplementedError("Cannot read 32 bit wave file")
-
-
-if __name__ == "__main__":
-    target = "../testing/24nocturnea.wav"
-    waveFile = Wave(target)
+midi_file.write("blind_mice.mid")

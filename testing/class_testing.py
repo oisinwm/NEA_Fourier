@@ -557,14 +557,15 @@ if __name__ == "__main__":
     FOURIER_INCREMENT = 512
     FOURIER_SIZE = 4096
     
+    
     results_dict = {}
     fourierStartTime = time.time()
-    for offset in range(850):
-    # for offset in range(int(a.get_data()[0].get_dim()[0]-8) // FOURIER_INCREMENT):
+    #for offset in range(130):
+    for offset in range((int(a.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
         b = Fourier(a.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
         #Shortest note appears to be 0.012 seconds long, bin number of 512
         
-        final = Fourier.autocorrelation(b) # Once transform is complete the values must be converted to hz
+        final = Fourier.FFT(b) # Once transform is complete the values must be converted to hz
         conversion_vector = a.convert_hertz(final) # HO BOI, use this to look up from a conversion table to get hz
         
         results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
@@ -582,7 +583,7 @@ if __name__ == "__main__":
     
     fourierEndTime = time.time()
     print(f"* Fourier complete. Elapsed time {fourierEndTime-loadStartTime} seconds.")
-    with open(filename[:-4] + "_test.txt", "w") as file:
+    with open(filename[:-4] + "_test.json", "w") as file:
         file.write(json.dumps(results_dict).replace("], ","],\n"))
                             
     
