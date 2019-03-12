@@ -562,7 +562,7 @@ class Fourier(Matrix):
         
 
 if __name__ == "__main__":
-    filename = "blind.wav"
+    filename = "3_notes.wav"
     print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
     
     loadStartTime = time.time()
@@ -580,9 +580,8 @@ if __name__ == "__main__":
     print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
     FOURIER_INCREMENT = 512
-    FOURIER_SIZE = 4096
+    FOURIER_SIZE = 2048
     
-    import numpy as np
     results_dict = {}
     fourierStartTime = time.time()
     #for offset in range(50):
@@ -594,7 +593,7 @@ if __name__ == "__main__":
         conversion_vector = a.convert_hertz(final) # HO BOI, use this to look up from a conversion table to get hz
         
         results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
-        peak_pos = [i[0] for i in Fourier.find_peaks(results, 30, 6, 0.1)._contents]
+        peak_pos = [i[0] for i in Fourier.find_peaks(results, 30, 5, 0.2)._contents]
         raw_peak_values = []
         for i in range(0, len(peak_pos)):
             if peak_pos[i]:
@@ -602,7 +601,7 @@ if __name__ == "__main__":
         
         filtered_peaks = Fourier.filter_peaks(raw_peak_values)
         hz_values = [conversion_vector[i][0] for i in filtered_peaks]
-        filtereds_hz_values = [h for h in Fourier.filter_peaks(hz_values) if h not in [333, 4026]]
+        filtereds_hz_values = [h for h in Fourier.filter_peaks(hz_values) if h not in [667, 1055]]
         results_dict[offset*FOURIER_INCREMENT] = list(filtereds_hz_values)
 
         

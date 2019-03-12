@@ -560,8 +560,50 @@ class Fourier(Matrix):
                 xn[i][0] = v[i+count][0].conjugate()
                 count -= 2
         return Fourier.IFFT(xn)
-                
     
+    @staticmethod
+    def low_pass_filter(vector, tau, v0=None):   
+        alpha = 1/44100 / tau
+        y = Matrix(m=vector.get_dim()[0], n=1)
+        yk = vector[0][0] if v0 is None else v0
+        for k in range(vector.get_dim()[0]):
+            yk += alpha * (vector[k][0]-yk)
+            y[k][0] = yk
+        return y
+        
+    @staticmethod
+    def centre_clip(vector, constant):
+        y = Matrix(m=vector.get_dim()[0], n=1)
+        for i in range(vector.get_dim()[0]):
+            if vector[i][0] >= constant:
+                y[i][0] = vector[i][0] - constant
+            elif abs(vector[i][0]) < constant:
+                y[i][0] = 0
+            elif vector[i][0] <= -constant:
+                y[i][0] = vector[i][0] + constant
+        return y
+    
+    @staticmethod
+    def med(vector):
+        values = sorted([i[0] for i in vector])
+        if len(values) % 2 == 0:
+            x = values[len(values)//2 -1:len(values)//2 +1]
+            return sum(x)/2
+        else:
+            return values[len(values)//2]
+    
+    @staticmethod
+    def median_filter(vector, size):
+        y = Matrix(m=vector.get_dim()[0], n=1)
+        y[0][0] = vector[0][0]
+        y[vector.get_dim()[0]-1][0] = vector[vector.get_dim()[0]-1][0]
+        end = size/2
+        for i in range(int(vector.get_dim()[0]-end)-size):
+            #print(vector.get_dim()[0], i+size-1, i, int(vector.get_dim()[0]-end))
+            window = vector.section(i, i+size-1, "h")
+            y[int(end+i)][0] = Fourier.med(window)
+        return y
+        
     @staticmethod
     def autocorrelation(vector):
         # Wiener–Khinchin theorem
@@ -590,10 +632,10 @@ class Fourier(Matrix):
         return (xv, yv)
         
 if __name__ == "__main__":
-    FOURIER_SIZE = 2048
-    FOURIER_INCREMENT = 512
+    FOURIER_SIZE = 1024
+    FOURIER_INCREMENT = 341
     
-    filename = "blind.wav"
+    filename = "3_notes.wav"
     
     try:
         with open(filename[:-4] + ".pickle", "rb") as file:
@@ -605,42 +647,18 @@ if __name__ == "__main__":
         with open(filename[:-4] + ".pickle", "wb") as file:
             pickle.dump(wave_file, file, protocol=pickle.HIGHEST_PROTOCOL)
     
+    wave_file.dataMatrices[0] = Matrix(m=10, n=1).concatanate(wave_file.get_data()[0], "v")
+    
     results_dict = {}
-    for offset in range(200):
+    for offset in range(10,11):
     #for offset in range((int(wave_file.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
         signal = Fourier(wave_file.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
+        filtered = Fourier.low_pass_filter(signal, 1/1500)
+        first_third_peak = max([i[0] for i in abs(filtered.section(0, 341, "h"))])
+        last_third_peak = max([i[0] for i in abs(filtered.section(683, 1023, "h"))])
+        clip_constant = 0.7 * min(first_third_peak, last_third_peak)
+        clipped = Fourier.centre_clip(filtered, clip_constant)
+        corr = abs(Fourier.autocorrelation(clipped))
+        post = Fourier.median_filter(corr, 15).section(0, FOURIER_SIZE//2, "h")
+        plt.plot([i[0] for i in post])
         
-        corr = abs(Fourier.autocorrelation(signal))
-        #corr[0][0] = 0
-        peak_pos = [i[0] for i in Fourier.find_peaks(corr, 5, 5, 0.1)._contents]
-        raw_peak_values = []
-        for i in range(0, len(peak_pos)):
-            if peak_pos[i]:
-                raw_peak_values += [i]
-        filtered = Fourier.filter_peaks(raw_peak_values)
-        raw_hz = [i * 44100 / FOURIER_SIZE for i in filtered]
-        #hz = Fourier.filter_peaks(raw_hz)
-        results_dict[FOURIER_SIZE*offset] = raw_hz
-        
-    #No notes last for less than 1/4 of a second
-    for key, value in results_dict.items():
-        present_freqs = list(value)
-        current_notes = {}
-        
-        while len(present_freqs) > 0:
-            freq = present_freqs.pop(0)
-            present_ranges = [range(int(i - 1/10), int(i + 1/10)) for i in present_freqs]
-            trimmed = []
-            for index, value in enumerate(present_freqs): # i is the index, value is the freq
-                 matches = [freq * (index+1) in i for i in present_ranges]
-                 for v in range(len(matches)):
-                     if matches[v]:
-                         trimmed.append(v)
-            strength = len(trimmed)
-            [present_freqs.pop(i) for i in trimmed]
-            if freq not in current_notes.keys():
-                current_notes[freq] = [strength, key, key]
-            else:
-                current_notes[freq][2] = key
-        
-        print(current_notes)

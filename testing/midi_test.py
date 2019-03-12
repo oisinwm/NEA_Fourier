@@ -82,11 +82,11 @@ class Midi:
     
 if __name__ == "__main__":
     FOURIER_INCREMENT = 512
-    FOURIER_SIZE = 4096
+    FOURIER_SIZE = 2048
     
     midi_file = Midi()
     
-    with open("blind_test.json", "r") as file:
+    with open("3_notes_test.json", "r") as file:
         results_dict = json.loads(file.read())
     
     v = 0
@@ -94,6 +94,7 @@ if __name__ == "__main__":
     start_t = 0
     end_t = 0
     for key, value in results_dict.items():
+        #value.pop(0)
         if len(value) > 3:
             if value[0] in list(range(int(v-error),int(v+error))):
                 v = (v+value[0])/2
@@ -111,7 +112,7 @@ if __name__ == "__main__":
                     count +=1
             print(f"strength {count}")
     
-    midi_file.write("blind_mice.mid")
+    midi_file.write("3_notes.mid")
             
 
             
