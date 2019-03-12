@@ -4,7 +4,7 @@ import time
 
 from classes import Matrix, Fourier, Wave, Midi
 
-import matplotlib.pylot as plt
+import matplotlib.pyplot as plt
 
 
 

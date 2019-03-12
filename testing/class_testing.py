@@ -171,7 +171,15 @@ class Matrix:
                     for j in range(y):
                         result_matrix[i][j] = self[i][j] + other[i][j]
                 return result_matrix
-
+        elif isinstance(other, self.number_types):
+            x = self.get_dim()[0]
+            y = self.get_dim()[1]
+            result_matrix = Matrix(m=x, n=y)
+            for i in range(x):
+                for j in range(y):
+                    result_matrix[i][j] = self[i][j] + other
+            return result_matrix
+        
         else:
             raise NotImplementedError(
                 f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
@@ -189,6 +197,16 @@ class Matrix:
                     for j in range(y):
                         result_matrix[i][j] = self[i][j] - other[i][j]
                 return result_matrix
+            
+        elif isinstance(other, self.number_types):
+            x = self.get_dim()[0]
+            y = self.get_dim()[1]
+            result_matrix = Matrix(m=x, n=y)
+            for i in range(x):
+                for j in range(y):
+                    result_matrix[i][j] = self[i][j] -other
+            return result_matrix
+        
         else:
             raise NotImplementedError(
                 f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
@@ -362,7 +380,7 @@ class Wave:
     def convert_hertz(self, vector):
         """Converts a fourier transform output index to its value in Hz"""
         N = vector.get_dim()[0]
-        T = N /self.sampleRate
+        T = N / self.sampleRate
         df = 1/T
         result = Matrix(m=N, n=1)
         for n in range(N):
@@ -533,7 +551,14 @@ class Fourier(Matrix):
         temp._omega_N = test._omega_N
         return temp
         
-        
+    @staticmethod
+    def parabolic(vector, index):
+        """Uses parabolic iterpolation to find the turning point of a parabola
+        that passes through vector[index] and its neighbors."""
+        index = int(index)
+        xv = 0.5 * (vector[index-1][0] - vector[index+1][0]) / (vector[index-1][0] - 2 * vector[index][0] + vector[index+1][0]) + index
+        yv = vector[index][0] - 0.25 * (vector[index-1][0] - vector[index+1][0]) * (xv - index)
+        return (xv, yv)
         
 
 if __name__ == "__main__":
@@ -557,10 +582,10 @@ if __name__ == "__main__":
     FOURIER_INCREMENT = 512
     FOURIER_SIZE = 4096
     
-    
+    import numpy as np
     results_dict = {}
     fourierStartTime = time.time()
-    #for offset in range(130):
+    #for offset in range(50):
     for offset in range((int(a.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
         b = Fourier(a.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
         #Shortest note appears to be 0.012 seconds long, bin number of 512
@@ -578,9 +603,9 @@ if __name__ == "__main__":
         filtered_peaks = Fourier.filter_peaks(raw_peak_values)
         hz_values = [conversion_vector[i][0] for i in filtered_peaks]
         filtereds_hz_values = [h for h in Fourier.filter_peaks(hz_values) if h not in [333, 4026]]
-
         results_dict[offset*FOURIER_INCREMENT] = list(filtereds_hz_values)
-    
+
+        
     fourierEndTime = time.time()
     print(f"* Fourier complete. Elapsed time {fourierEndTime-loadStartTime} seconds.")
     with open(filename[:-4] + "_test.json", "w") as file:
