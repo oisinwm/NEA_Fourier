@@ -48,7 +48,7 @@ for offset in range((int(a.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_I
     
     filtered_peaks = Fourier.filter_peaks(raw_peak_values)
     hz_values = [conversion_vector[i][0] for i in filtered_peaks]
-    filtereds_hz_values = [h for h in Fourier.filter_peaks(hz_values) if h not in [333, 4026]]
+    filtereds_hz_values = [h for h in Fourier.filter_peaks(hz_values) if h not in [667, 4026]]
 
     results_dict[offset*FOURIER_INCREMENT] = list(filtereds_hz_values)
 
