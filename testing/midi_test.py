@@ -18,7 +18,7 @@ class Midi:
         self.events = [(0,0)]
         
     def hz_to_key(self, hz):
-        return hex(int(69 + 12 * math.log(int(hz)/440, 2)))[2:]
+        return hex(int(69 + 12 * math.log(hz/440, 2)))[2:]
     
     def velocity_to_hex(self, v):
         return "40"

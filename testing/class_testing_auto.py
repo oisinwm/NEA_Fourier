@@ -7,6 +7,79 @@ import json
 import random
 
 
+class Midi:
+    """A representation of a midi file,
+     can be written to an actual file through use of .write(filename)"""
+    def __init__(self):
+        self.format = 0
+        self.tracks = 1
+        self.division = 96
+        self.events = [(0,0)]
+        
+    def hz_to_key(self, hz):
+        return hex(int(69 + 12 * math.log(hz/440, 2)))[2:]
+    
+    def velocity_to_hex(self, v):
+        return "40"
+    
+    def sample_to_tick(self, sample):
+        return int(int(sample) // (44100 / (2*self.division))) # Fix hardcoding
+    
+    def add_note(self, start_sample, end_sample, note, velocity, channel=0):
+        # At 120 BPM, 1s = 2b
+        # 96 ticks per 1/4 note
+        # 230 samples per tick
+        note_on = "9" + hex(channel)[2:] + self.hz_to_key(note) + self.velocity_to_hex(velocity)
+        note_off = "8" + hex(channel)[2:] + self.hz_to_key(note) + "40"
+        if int(end_sample) - int(start_sample) > 1000:
+            self.events.append((self.sample_to_tick(start_sample), note_on))
+            self.events.append((self.sample_to_tick(end_sample), note_off))
+        
+        
+    def write(self, filename):
+        # Prepare file header
+        header = "4d54686400000006" 
+        header += hex(self.format)[2:].zfill(4)
+        header += hex(self.tracks)[2:].zfill(4)
+        header += hex(self.division)[2:].zfill(4)
+        
+        # Prepare track data
+        track_data = ""
+        ordered_events = list(sorted(self.events, key=lambda tup: tup[0]))
+        delta_times = [ordered_events[i][0] - ordered_events[i-1][0] for i in range(1, len(ordered_events))]
+        delta_vlq = [self.vlq(i) for i in delta_times]
+        for index, event in enumerate(ordered_events):
+            if index != 0: # Empty event to begin 
+                track_data += delta_vlq[index-1] + event[1]
+        
+        track_data += "19ff2f0000ff2f00" # End of track event
+        
+        #prepare track header
+        track_header = "4d54726b"
+        track_header += hex(len(track_data)//2)[2:].zfill(8)
+        
+        # Write file
+        final_hex_string = header + track_header + track_data
+        with open(filename, "wb") as midi_file:
+            midi_file.write(bytearray.fromhex(final_hex_string))
+    
+    def vlq(self, value):
+        bits = list(bin(value)[2:])
+        while len(bits) % 7 != 0:
+            bits = ["0"] + bits
+        rev_bits = bits[::-1]
+        result = []
+        for i, value in enumerate(rev_bits):
+            result.append(value)
+            if (i+1) == 7:
+                result.append("0")
+            elif (i+1) % 7 == 0:
+                result.append("1")
+        binary_str = "".join(result)[::-1]
+        hex_result = [hex(int(binary_str[i:i + 4],2))[2:] for i in range(0, len(binary_str), 4)]
+        return "".join(hex_result)
+
+
 class Matrix:
     """A  n*m matrix class, can be constructed from a list of objects or a 2d list of objects
         e.g.
@@ -409,12 +482,6 @@ class SquareMatrix(Matrix):
         Matrix.__init__(self)
 
 
-class Midi:
-    """A representation of a midi file,
-     can be written to an actual file through use of .write(filename)"""
-    pass
-
-
 class Identity(Matrix):
     def __init__(self, x):
         Matrix.__init__(self, m=x, n=x)
@@ -506,9 +573,12 @@ class Fourier(Matrix):
     
     @staticmethod
     def std(vector):
+        #print(vector)
         n = vector.get_dim()[0]
-        total = sum([i[0]**2 for i in vector._contents])
-        return math.sqrt(total / n - Fourier.avg(vector)**2)
+        ex2 = sum([i[0]**2 for i in vector._contents]) / n
+        if ex2 - Fourier.avg(vector)**2 <= 0:
+            return 0
+        return math.sqrt(ex2 - Fourier.avg(vector)**2)
     
     @staticmethod
     def FFT(vector):
@@ -630,12 +700,27 @@ class Fourier(Matrix):
         xv = 0.5 * (vector[index-1][0] - vector[index+1][0]) / (vector[index-1][0] - 2 * vector[index][0] + vector[index+1][0]) + index
         yv = vector[index][0] - 0.25 * (vector[index-1][0] - vector[index+1][0]) * (xv - index)
         return (xv, yv)
+    
+    @staticmethod
+    def reduce(lst):
+        lst = list(lst)
+        results = []
+        while len(lst) > 0:
+            current = lst.pop(0)
+            while len(lst) > 0 and lst[0][0] in range(int(current[0] - current[0]/100), int(current[0]+current[0]/100)):
+                extra = lst.pop(0)
+                current[0] = (current[0] + extra[0])/2
+                current[3] += 512
+                if extra[2] > current[2]:
+                    current[2] = extra[2]
+            results.append(current)
+        return results
         
 if __name__ == "__main__":
     FOURIER_SIZE = 1024
     FOURIER_INCREMENT = 341
     
-    filename = "3_notes.wav"
+    filename = "blind.wav"
     
     try:
         with open(filename[:-4] + ".pickle", "rb") as file:
@@ -649,9 +734,9 @@ if __name__ == "__main__":
     
     wave_file.dataMatrices[0] = Matrix(m=10, n=1).concatanate(wave_file.get_data()[0], "v")
     
-    results_dict = {}
-    for offset in range(10,11):
-    #for offset in range((int(wave_file.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
+    results_lst = []
+    #for offset in range(39,39+1):
+    for offset in range((int(wave_file.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
         signal = Fourier(wave_file.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
         filtered = Fourier.low_pass_filter(signal, 1/1500)
         first_third_peak = max([i[0] for i in abs(filtered.section(0, 341, "h"))])
@@ -660,5 +745,40 @@ if __name__ == "__main__":
         clipped = Fourier.centre_clip(filtered, clip_constant)
         corr = abs(Fourier.autocorrelation(clipped))
         post = Fourier.median_filter(corr, 15).section(0, FOURIER_SIZE//2, "h")
-        plt.plot([i[0] for i in post])
+        peaks = Fourier.find_peaks(post, 10, 3, 0.05)
         
+        energy = sum([abs(i[0]**2) for i in signal])
+        volume_threshold = post[0][0] * 0.55
+        
+        #remove initial peak around 0
+        for i in range(20):
+            post[i][0] = 0
+        
+        first = True
+        for x in range(peaks.get_dim()[0]-1):
+            if first and peaks[x][0]:
+                peaks[x][0] = 0
+                first = False
+            elif peaks[x][0] == 1 and peaks[x+1][0] == 1:
+                peaks[x][0] = 0
+        
+        vol = max([i[0] for i in post])
+        if volume_threshold < vol:
+            if 1 in [i[0] for i in peaks]:
+                #ORDER: sample_offset, bin_no, volume, length
+                results_lst.append([offset*FOURIER_INCREMENT, [i[0] for i in peaks].index(1)*3.5, vol, 0])
+            else:
+                plt.plot([i[0] for i in post])
+                plt.plot([i[0] for i in 10**9*peaks])
+                plt.show()
+    
+    loudest_results = list(sorted(Fourier.reduce(results_lst), key=lambda tup: tup[2]))[::-1][:len(results_lst)//2]
+    midi_file = Midi()
+    
+    for note in loudest_results:
+        if note[3] > 0:
+            print("note added")
+            midi_file.add_note(note[0], note[0]+note[3], note[1], 40)
+    
+    midi_file.write("full_auto.mid")
+    

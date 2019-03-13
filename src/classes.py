@@ -528,7 +528,7 @@ class Midi:
         # 230 samples per tick
         note_on = "9" + hex(channel)[2:] + self.hz_to_key(note) + self.velocity_to_hex(velocity)
         note_off = "8" + hex(channel)[2:] + self.hz_to_key(note) + "40"
-        if int(end_sample) - int(start_sample) > 2800:
+        if int(end_sample) - int(start_sample) > 11025:
             self.events.append((self.sample_to_tick(start_sample), note_on))
             self.events.append((self.sample_to_tick(end_sample), note_off))
         

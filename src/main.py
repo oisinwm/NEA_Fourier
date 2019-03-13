@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 
 
-filename = "blind.wav"
+filename = "24nocturnea.wav"
 print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
 
 loadStartTime = time.time()
@@ -58,7 +58,7 @@ print(f"* Fourier complete. Elapsed time {fourierEndTime-loadStartTime} seconds.
 with open(filename[:-4] + "_test.json", "w") as file:
     file.write(json.dumps(results_dict).replace("], ","],\n"))
 
-with open("blind_test.json", "r") as file:
+with open(filename[:-4] + "_test.json", "r") as file:
     results_dict = json.loads(file.read())
 
 midi_file = Midi()
@@ -85,4 +85,4 @@ for key, value in results_dict.items():
                 count +=1
         print(f"strength {count}")
 
-midi_file.write("blind_mice.mid")
+midi_file.write("2048.mid")
