@@ -26,7 +26,7 @@ loadEndTime = time.time()
 print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
 
 FOURIER_INCREMENT = 512
-FOURIER_SIZE = 4096
+FOURIER_SIZE = 2048
 
 
 results_dict = {}
@@ -76,13 +76,13 @@ for key, value in results_dict.items():
             if v != 0:
                 midi_file.add_note(start_t, end_t, v, 40)
             v = value[0]
-            print(f"\nnew note {v} hz at key {key}")
+            #print(f"\nnew note {v} hz at key {key}")
             start_t = key
         error = v/30
         count = 1
         for i, num in enumerate(value):
             if (i+1) * v in list(range(int(num-(i+1)*error), int(num+(i+1)*error))):
                 count +=1
-        print(f"strength {count}")
+        #print(f"strength {count}")
 
 midi_file.write("2048.mid")
