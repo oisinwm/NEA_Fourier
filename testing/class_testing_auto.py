@@ -707,9 +707,9 @@ class Fourier(Matrix):
         results = []
         while len(lst) > 0:
             current = lst.pop(0)
-            while len(lst) > 0 and lst[0][0] in range(int(current[0] - current[0]/100), int(current[0]+current[0]/100)):
+            while len(lst) > 0 and lst[0] in range(int(current[0] - current[0]/100), int(current[0]+current[0]/100)):
                 extra = lst.pop(0)
-                current[0] = (current[0] + extra[0])/2
+                current = (current[0] + extra[0])/2
                 current[3] += 512
                 if extra[2] > current[2]:
                     current[2] = extra[2]
@@ -717,10 +717,10 @@ class Fourier(Matrix):
         return results
         
 if __name__ == "__main__":
-    FOURIER_SIZE = 1024
-    FOURIER_INCREMENT = 341
+    FOURIER_SIZE = 2048
+    FOURIER_INCREMENT = 256
     
-    filename = "blind.wav"
+    filename = "single.wav"
     
     try:
         with open(filename[:-4] + ".pickle", "rb") as file:
@@ -734,25 +734,29 @@ if __name__ == "__main__":
     
     wave_file.dataMatrices[0] = Matrix(m=10, n=1).concatanate(wave_file.get_data()[0], "v")
     
+    temp_lst = []
     results_lst = []
-    #for offset in range(39,39+1):
+    #for offset in range(9, 10):
     for offset in range((int(wave_file.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
         signal = Fourier(wave_file.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
         filtered = Fourier.low_pass_filter(signal, 1/1500)
-        first_third_peak = max([i[0] for i in abs(filtered.section(0, 341, "h"))])
-        last_third_peak = max([i[0] for i in abs(filtered.section(683, 1023, "h"))])
+        first_third_peak = max([i[0] for i in abs(filtered.section(0, FOURIER_SIZE//2, "h"))])
+        last_third_peak = max([i[0] for i in abs(filtered.section(FOURIER_SIZE-1-(FOURIER_SIZE//2), FOURIER_SIZE-2, "h"))])
         clip_constant = 0.7 * min(first_third_peak, last_third_peak)
         clipped = Fourier.centre_clip(filtered, clip_constant)
         corr = abs(Fourier.autocorrelation(clipped))
         post = Fourier.median_filter(corr, 15).section(0, FOURIER_SIZE//2, "h")
         peaks = Fourier.find_peaks(post, 10, 3, 0.05)
         
-        energy = sum([abs(i[0]**2) for i in signal])
+        energy = sum([abs(i[0])**2 for i in signal])
         volume_threshold = post[0][0] * 0.55
         
         #remove initial peak around 0
         for i in range(20):
-            post[i][0] = 0
+            peaks[i][0] = 0
+            
+        if max([i[0] for i in corr]) > 2*10**9:
+            print(f"offset: {offset}")
         
         first = True
         for x in range(peaks.get_dim()[0]-1):
@@ -761,6 +765,8 @@ if __name__ == "__main__":
                 first = False
             elif peaks[x][0] == 1 and peaks[x+1][0] == 1:
                 peaks[x][0] = 0
+        
+        temp_lst += [x for x in range(post.get_dim()[0]) if peaks[x][0]==1]
         
         vol = max([i[0] for i in post])
         if volume_threshold < vol:
@@ -776,7 +782,7 @@ if __name__ == "__main__":
     midi_file = Midi()
     
     for note in loudest_results:
-        if note[3] > 0:
+        if note[3] >= 0:
             print("note added")
             midi_file.add_note(note[0], note[0]+note[3], note[1], 40)
     
