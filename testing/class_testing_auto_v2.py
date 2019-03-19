@@ -726,6 +726,10 @@ class Fourier(Matrix):
             result[i][0] = window * vector[i][0]
         return result
     
+    @staticmethod
+    def rms(vector):
+        return math.sqrt(sum([i[0]**2 for i in vector])/vector.get_dim()[0])
+    
         
 if __name__ == "__main__":
     FOURIER_SIZE = 2048
@@ -750,52 +754,34 @@ if __name__ == "__main__":
     #for offset in range(9, 10):
     for offset in range((int(wave_file.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
         signal = Fourier(wave_file.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
-        filtered = Fourier.low_pass_filter(signal, 1/1500)
-        first_third_peak = max([i[0] for i in abs(filtered.section(0, FOURIER_SIZE//2, "h"))])
-        last_third_peak = max([i[0] for i in abs(filtered.section(FOURIER_SIZE-1-(FOURIER_SIZE//2), FOURIER_SIZE-2, "h"))])
-        clip_constant = 0.7 * min(first_third_peak, last_third_peak)
-        clipped = Fourier.centre_clip(filtered, clip_constant)
-        corr = abs(Fourier.autocorrelation(clipped))
-        post = Fourier.median_filter(corr, 15).section(0, FOURIER_SIZE//2, "h")
-        peaks = Fourier.find_peaks(post, 10, 3, 0.05)
+        results_lst.append(Fourier.rms(signal))
         
-        energy = sum([abs(i[0])**2 for i in signal])
-        volume_threshold = post[0][0] * 0.55
-        
-        #remove initial peak around 0
-        for i in range(20):
-            peaks[i][0] = 0
-            
-        if max([i[0] for i in corr]) > 2*10**9:
-            print(f"offset: {offset}")
-        
-        first = True
-        for x in range(peaks.get_dim()[0]-1):
-            if first and peaks[x][0]:
-                peaks[x][0] = 0
-                first = False
-            elif peaks[x][0] == 1 and peaks[x+1][0] == 1:
-                peaks[x][0] = 0
-        
-        
-        
-        vol = max([i[0] for i in post])
-        if volume_threshold < vol:
-            if 1 in [i[0] for i in peaks]:
-                #ORDER: sample_offset, bin_no, volume, length
-                results_lst.append([offset*FOURIER_INCREMENT, [i[0] for i in peaks].index(1)*3.5, vol, 0])
-            else:
-                plt.plot([i[0] for i in post])
-                plt.plot([i[0] for i in 10**9*peaks])
-                plt.show()
-    
-    loudest_results = list(sorted(Fourier.reduce(results_lst), key=lambda tup: tup[2]))[::-1][:len(results_lst)//2]
-    midi_file = Midi()
-    
-    for note in loudest_results:
-        if note[3] >= 0:
-            print("note added")
-            midi_file.add_note(note[0], note[0]+note[3], note[1], 40)
-    
-    midi_file.write("full_auto.mid")
-    
+v = Matrix([[i] for i in results_lst])
+x = [i[0] for i in Fourier.find_peaks(v, 5, 3, 0.1)]
+dividers = []
+prev=0
+for i in range(1, len(x)):
+    if x[i]==1 and x[i-1]==0:
+        if i-prev > 8:
+            prev = i
+            dividers.append(i)
+
+if len(dividers) > 0:
+    start = 0
+    for j in dividers:
+        end = int(math.log(j*FOURIER_INCREMENT + start, 2))**2
+        print(f"length - {end-start}")
+        signal = Fourier(wave_file.get_data()[0].section(start*FOURIER_INCREMENT, (end*FOURIER_INCREMENT)-1, "h"), pad=True)
+        corr = abs(Fourier.autocorrelation(signal))
+        post = Fourier.median_filter(corr, 15).section(0, corr.get_dim()[0]//2, "h")
+        plt.plot([i for i in post])
+        plt.show()
+        start = end
+else:
+    length = int(math.log(wave_file.get_data()[0].get_dim()[0]-1, 2))
+    print(f"length - {length}")
+    signal = Fourier(wave_file.get_data()[0].section(0, (2**length)*FOURIER_INCREMENT-1, "h"), pad=True)
+    corr = abs(Fourier.autocorrelation(signal))
+    post = Fourier.median_filter(corr, 15).section(0, corr.get_dim()[0]//2, "h")
+    plt.plot([i for i in post])
+    # plt.plot([i[0]*3*10**11 for i in Fourier.find_peaks(post, 5, 4, 0.5)])
