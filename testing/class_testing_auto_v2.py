@@ -464,29 +464,14 @@ class Wave:
         """Converts a fourier transform output index to its value in Hz"""
         N = vector.get_dim()[0]
         T = N / self.sampleRate
-        df = 1/T
+        df = 1 / T
         result = Matrix(m=N, n=1)
         for n in range(N):
             if n < N/2:
-                result[n][0] = df*n
+                result[n][0] = df*n // 2
             else:
-                result[n][0] = df*(n-N)
+                result[n][0] = df*(n-N) // 2
         return result
-        
-    
-
-class SquareMatrix(Matrix):
-    """A n*n matrix class, a special instance of a Matrix that is square"""
-
-    def __init__(self):
-        Matrix.__init__(self)
-
-
-class Identity(Matrix):
-    def __init__(self, x):
-        Matrix.__init__(self, m=x, n=x)
-        for i in range(x):
-            self[i][i] = 1
     
     
 class Fourier(Matrix):
@@ -757,20 +742,28 @@ if __name__ == "__main__":
         results_lst.append(Fourier.rms(signal))
         
     v = Matrix([[i] for i in results_lst])
-    x = [i[0] for i in Fourier.find_peaks(v, 5, 3, 0.1)]
+    x = [i[0] for i in Fourier.find_peaks(v, 10, 3, 0.1)]
     dividers = []
     prev=0
     for i in range(1, len(x)):
         if x[i]==1 and x[i-1]==0:
-            if i-prev > 8:
+            if i-prev > 25:
                 prev = i
                 dividers.append(i)
+    dividers.append(len(x))
+    
+    plt.plot([i for i in wave_file.get_data()[0]])
+    thang = [20000 if i//FOURIER_INCREMENT in dividers else 0 for i in range(wave_file.get_data()[0].get_dim()[0])]
+    plt.plot(thang)
+    plt.show()
+    
+    midi_file = Midi()
     
     if len(dividers) > 0:
         start = 0
         for j in dividers:
-            #end = 2**int(math.log(j*FOURIER_INCREMENT + start, 2))
-            end = start + 16384
+            end = j*FOURIER_INCREMENT
+            #end = start + 16384
             print(f"length - {start}, {end}")
             if start != end:
                 signal = Fourier(wave_file.get_data()[0].section(start, (end)-1, "h"), pad=True)
@@ -782,9 +775,10 @@ if __name__ == "__main__":
                 value = max([i[0] for i in post])
                 pos = post._contents.index([value])
                 hz_post = wave_file.convert_hertz(post)
-                print(hz_post[pos][0]/2)
+                print(hz_post[pos][0])
+                
+                midi_file.add_note(start, end, hz_post[pos][0], 40)
             start = end
-            
             
     else:
         length = 2**int(math.log(wave_file.get_data()[0].get_dim()[0]-1, 2))
@@ -794,3 +788,5 @@ if __name__ == "__main__":
         post = Fourier.median_filter(corr, 15).section(0, corr.get_dim()[0]//2, "h")
         plt.plot([i for i in post])
         # plt.plot([i[0]*3*10**11 for i in Fourier.find_peaks(post, 5, 4, 0.5)])
+    
+    midi_file.write(filename[:-4] + ".mid")

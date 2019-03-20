@@ -786,12 +786,6 @@ if __name__ == "__main__":
         
         filtered_peaks = Fourier.filter_peaks(raw_peak_values)
         hz_values = [conversion_vector[i][0] for i in filtered_peaks]
-        filtereds_hz_values = [h for h in Fourier.filter_peaks(hz_values) if h not in [667, 1055]]
+        filtereds_hz_values = [h for h in Fourier.filter_peaks(hz_values)]
         results_dict[offset*FOURIER_INCREMENT] = list(filtereds_hz_values)
-
-        
-                            
-    
-
-    
 
