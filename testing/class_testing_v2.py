@@ -1,10 +1,9 @@
 import pickle
 import math
-import matplotlib.pyplot as plt
+import matplotlib.pyplot
 import cmath
 import time
 import json
-import random
 
 
 class Midi:
@@ -729,14 +728,13 @@ class Fourier(Matrix):
     @staticmethod
     def rms(vector):
         return math.sqrt(sum([i[0]**2 for i in vector])/vector.get_dim()[0])
-    
         
+
 if __name__ == "__main__":
-    FOURIER_SIZE = 2048
-    FOURIER_INCREMENT = 256
+    filename = "3_notes.wav"
+    print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
     
-    filename = "blind.wav"
-    
+    loadStartTime = time.time()
     try:
         with open(filename[:-4] + ".pickle", "rb") as file:
             print("Cached file verison found!\n")
@@ -746,16 +744,21 @@ if __name__ == "__main__":
         wave_file = Wave(filename)
         with open(filename[:-4] + ".pickle", "wb") as file:
             pickle.dump(wave_file, file, protocol=pickle.HIGHEST_PROTOCOL)
+
+    loadEndTime = time.time()
+    print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
-    wave_file.dataMatrices[0] = Matrix(m=10, n=1).concatanate(wave_file.get_data()[0], "v")
+    FOURIER_INCREMENT = 512
+    FOURIER_SIZE = 2048
     
-    temp_lst = []
+    results_dict = {}
+    fourierStartTime = time.time()
+    
     results_lst = []
-    #for offset in range(9, 10):
     for offset in range((int(wave_file.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
         signal = Fourier(wave_file.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
         results_lst.append(Fourier.rms(signal))
-        
+            
     v = Matrix([[i] for i in results_lst])
     x = [i[0] for i in Fourier.find_peaks(v, 5, 3, 0.1)]
     dividers = []
@@ -766,31 +769,29 @@ if __name__ == "__main__":
                 prev = i
                 dividers.append(i)
     
-    if len(dividers) > 0:
-        start = 0
-        for j in dividers:
-            #end = 2**int(math.log(j*FOURIER_INCREMENT + start, 2))
-            end = start + 16384
-            print(f"length - {start}, {end}")
-            if start != end:
-                signal = Fourier(wave_file.get_data()[0].section(start, (end)-1, "h"), pad=True)
-                corr = abs(Fourier.FFT(signal))
-                post = Fourier.median_filter(corr, 15).section(0, corr.get_dim()[0]//2, "h")
-                plt.plot([i for i in post])
-                plt.show()
-            
-                value = max([i[0] for i in post])
-                pos = post._contents.index([value])
-                hz_post = wave_file.convert_hertz(post)
-                print(hz_post[pos][0]/2)
-            start = end
-            
-            
-    else:
-        length = 2**int(math.log(wave_file.get_data()[0].get_dim()[0]-1, 2))
-        print(f"length - {length}")
-        signal = Fourier(wave_file.get_data()[0].section(0, (length)-1, "h"), pad=True)
-        corr = abs(Fourier.autocorrelation(signal))
-        post = Fourier.median_filter(corr, 15).section(0, corr.get_dim()[0]//2, "h")
-        plt.plot([i for i in post])
-        # plt.plot([i[0]*3*10**11 for i in Fourier.find_peaks(post, 5, 4, 0.5)])
+    #for offset in range(50):
+    for offset in range((int(wave_file.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
+        b = Fourier(wave_file.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
+        #Shortest note appears to be 0.012 seconds long, bin number of 512
+        
+        final = Fourier.FFT(b) # Once transform is complete the values must be converted to hz
+        conversion_vector = wave_file.convert_hertz(final) # HO BOI, use this to look up from a conversion table to get hz
+        
+        results = Matrix([[abs(final[i][0])] for i in range(final.get_dim()[0]//2)])
+        peak_pos = [i[0] for i in Fourier.find_peaks(results, 30, 5, 0.2)._contents]
+        raw_peak_values = []
+        for i in range(0, len(peak_pos)):
+            if peak_pos[i]:
+                raw_peak_values += [i]
+        
+        filtered_peaks = Fourier.filter_peaks(raw_peak_values)
+        hz_values = [conversion_vector[i][0] for i in filtered_peaks]
+        filtereds_hz_values = [h for h in Fourier.filter_peaks(hz_values) if h not in [667, 1055]]
+        results_dict[offset*FOURIER_INCREMENT] = list(filtereds_hz_values)
+
+        
+                            
+    
+
+    
+
