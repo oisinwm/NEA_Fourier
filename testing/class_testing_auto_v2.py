@@ -3,8 +3,6 @@ import math
 import matplotlib.pyplot as plt
 import cmath
 import time
-import json
-import random
 
 
 class Midi:
@@ -405,7 +403,7 @@ class Wave:
         
         # Read in data from array
         self.frameStartIndex = 44  # Not 100% sure if should be hardcoded or dynamic, mostly sure its constant
-        print(self.dataLen, self.frameSize)
+        
         framesNum = self.dataLen / self.frameSize
         if framesNum.is_integer():
             framesNum = int(framesNum)
@@ -472,6 +470,20 @@ class Wave:
             else:
                 result[n][0] = df*(n-N) // 2
         return result
+    
+    
+class SquareMatrix(Matrix):
+    """A n*n matrix class, a special instance of a Matrix that is square"""
+
+    def __init__(self):
+        Matrix.__init__(self)
+
+
+class Identity(Matrix):
+    def __init__(self, x):
+        Matrix.__init__(self, m=x, n=x)
+        for i in range(x):
+            self[i][i] = 1
     
     
 class Fourier(Matrix):
@@ -720,8 +732,10 @@ if __name__ == "__main__":
     FOURIER_SIZE = 2048
     FOURIER_INCREMENT = 256
     
-    filename = "blind.wav"
+    filename = "station6.wav"
+    print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
     
+    loadStartTime = time.time()
     try:
         with open(filename[:-4] + ".pickle", "rb") as file:
             print("Cached file verison found!\n")
@@ -731,6 +745,8 @@ if __name__ == "__main__":
         wave_file = Wave(filename)
         with open(filename[:-4] + ".pickle", "wb") as file:
             pickle.dump(wave_file, file, protocol=pickle.HIGHEST_PROTOCOL)
+    loadEndTime = time.time()
+    print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
     wave_file.dataMatrices[0] = Matrix(m=10, n=1).concatanate(wave_file.get_data()[0], "v")
     
@@ -751,6 +767,9 @@ if __name__ == "__main__":
                 prev = i
                 dividers.append(i)
     dividers.append(len(x))
+    
+    noteEndTime = time.time()
+    print(f"* Note partitioning complete. Elapsed time {noteEndTime-loadEndTime} seconds.")
     
     plt.plot([i for i in wave_file.get_data()[0]])
     thang = [20000 if i//FOURIER_INCREMENT in dividers else 0 for i in range(wave_file.get_data()[0].get_dim()[0])]
@@ -776,8 +795,8 @@ if __name__ == "__main__":
                 pos = post._contents.index([value])
                 hz_post = wave_file.convert_hertz(post)
                 print(hz_post[pos][0])
-                
-                midi_file.add_note(start, end, hz_post[pos][0], 40)
+                if hz_post[pos][0] > 0:
+                    midi_file.add_note(start, end, hz_post[pos][0], 40)
             start = end
             
     else:
@@ -789,4 +808,10 @@ if __name__ == "__main__":
         plt.plot([i for i in post])
         # plt.plot([i[0]*3*10**11 for i in Fourier.find_peaks(post, 5, 4, 0.5)])
     
-    midi_file.write(filename[:-4] + ".mid")
+    fourierEndTime = time.time()
+    print(f"* Fourier transforms complete. Elapsed time {fourierEndTime-noteEndTime} seconds.")
+    
+    midi_file.write(filename[:-4] + "_real" + ".mid")
+    endEndTime = time.time()
+    print(f"* Midi file write complete. Total elapsed time {endEndTime-loadStartTime} seconds.")
+    
