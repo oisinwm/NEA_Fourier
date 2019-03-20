@@ -1,6 +1,6 @@
 import pickle
 import math
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import cmath
 import time
 
@@ -89,7 +89,8 @@ class Matrix:
             __add__
             __sub__
     """
-
+    __slots__ = ["_contents", "_dimensions", "number_types", "matrix_types"]
+    
     def __init__(self, *args, **kwargs):
         self._contents = []
         self._dimensions = [0, 0]
@@ -760,7 +761,7 @@ if __name__ == "__main__":
     v = Matrix([[i] for i in results_lst])
     x = [i[0] for i in Fourier.find_peaks(v, 10, 3, 0.1)]
     dividers = []
-    prev=0
+    prev = 0
     for i in range(1, len(x)):
         if x[i]==1 and x[i-1]==0:
             if i-prev > 25:
@@ -771,10 +772,10 @@ if __name__ == "__main__":
     noteEndTime = time.time()
     print(f"* Note partitioning complete. Elapsed time {noteEndTime-loadEndTime} seconds.")
     
-    plt.plot([i for i in wave_file.get_data()[0]])
-    thang = [20000 if i//FOURIER_INCREMENT in dividers else 0 for i in range(wave_file.get_data()[0].get_dim()[0])]
-    plt.plot(thang)
-    plt.show()
+    # plt.plot([i for i in wave_file.get_data()[0]])
+    # thang = [20000 if i//FOURIER_INCREMENT in dividers else 0 for i in range(wave_file.get_data()[0].get_dim()[0])]
+    # plt.plot(thang)
+    # plt.show()
     
     midi_file = Midi()
     
@@ -788,8 +789,8 @@ if __name__ == "__main__":
                 signal = Fourier(wave_file.get_data()[0].section(start, (end)-1, "h"), pad=True)
                 corr = abs(Fourier.FFT(signal))
                 post = Fourier.median_filter(corr, 15).section(0, corr.get_dim()[0]//2, "h")
-                plt.plot([i for i in post])
-                plt.show()
+                # plt.plot([i for i in post])
+                # plt.show()
             
                 value = max([i[0] for i in post])
                 pos = post._contents.index([value])
@@ -805,7 +806,7 @@ if __name__ == "__main__":
         signal = Fourier(wave_file.get_data()[0].section(0, (length)-1, "h"), pad=True)
         corr = abs(Fourier.autocorrelation(signal))
         post = Fourier.median_filter(corr, 15).section(0, corr.get_dim()[0]//2, "h")
-        plt.plot([i for i in post])
+        # plt.plot([i for i in post])
         # plt.plot([i[0]*3*10**11 for i in Fourier.find_peaks(post, 5, 4, 0.5)])
     
     fourierEndTime = time.time()
