@@ -15,7 +15,10 @@ class Midi:
         self.events = [(0,0)]
         
     def hz_to_key(self, hz):
-        return hex(int(69 + 12 * math.log(hz/440, 2)))[2:]
+        x = int(69 + 12 * math.log(hz/440, 2))
+        if x not in list(range(128)):
+            print(f"broken {x}")
+        return hex(x)[2:]
     
     def velocity_to_hex(self, v):
         return "40"
@@ -733,7 +736,7 @@ if __name__ == "__main__":
     FOURIER_SIZE = 2048
     FOURIER_INCREMENT = 256
     
-    filename = "station6.wav"
+    filename = "station_test.wav"
     print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
     
     loadStartTime = time.time()
