@@ -89,7 +89,7 @@ class Matrix:
             __add__
             __sub__
     """
-    __slots__ = ["_contents", "_dimensions", "number_types", "matrix_types"]
+    # __slots__ = ["_contents", "_dimensions", "number_types", "matrix_types"]
     
     def __init__(self, *args, **kwargs):
         self._contents = []
