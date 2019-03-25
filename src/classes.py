@@ -186,6 +186,15 @@ class Matrix:
             raise NotImplementedError(
                 f"unsupported operand type(s) for +: '{type(self)}' and '{type(other)}'")
 
+    def __abs__(self):
+        x = self.get_dim()[0]
+        y = self.get_dim()[1]
+        result_matrix = Matrix(m=x, n=y)
+        for i in range(x):
+            for j in range(y):
+                result_matrix[i][j] = abs(self[i][j])
+        return result_matrix
+
     def get_dim(self):
         return self._dimensions
     
@@ -196,52 +205,50 @@ class Matrix:
             result += [cmath.exp(x * i)]
         return Matrix([result])
     
-    def concatanate(self, other, direction):
+    def concatenate(self, other, direction):
         other_m, other_n = zip(other.get_dim())
         other_m, other_n = other_m[0], other_n[0]
         if not (issubclass(type(other), type(self)) or issubclass(type(self), type(other))):
             raise ValueError(f"unsupported type for concatanate: {type(other)}")
-        if direction in ["vertial", "v"]:
+        if direction in ["vertical", "v"]:
             if not self.get_dim()[1] == other.get_dim()[1]:
                 raise ValueError
-            
-            result = Matrix(m=self.get_dim()[0] + other.get_dim()[0], 
+
+            result = Matrix(m=self.get_dim()[0] + other.get_dim()[0],
                             n=self.get_dim()[1])
-            
+
             for y in range(self.get_dim()[0]):
                 for x in range(result.get_dim()[1]):
                     result[y][x] = self[y][x]
-            
+
             for y in range(self.get_dim()[0], result.get_dim()[0]):
                 for x in range(result.get_dim()[1]):
-                    result[y][x] = other[y-self.get_dim()[0]][x]
-            
-            return result
-        
+                    result[y][x] = other[y - self.get_dim()[0]][x]
+
         elif direction in ["horizontal", "h"]:
             if not self.get_dim()[0] == other.get_dim()[0]:
                 raise ValueError
-            
-            result = Matrix(m=self.get_dim()[0], 
-                            n=self.get_dim()[1]+ other.get_dim()[1])
-            
+
+            result = Matrix(m=self.get_dim()[0],
+                            n=self.get_dim()[1] + other.get_dim()[1])
+
             for x in range(self.get_dim()[1]):
                 for y in range(result.get_dim()[0]):
                     result[y][x] = self[y][x]
-            
+
             for x in range(self.get_dim()[1], result.get_dim()[1]):
                 for y in range(result.get_dim()[0]):
-                    result[y][x] = other[y][x-self.get_dim()[1]]
-            
-            return result
+                    result[y][x] = other[y][x - self.get_dim()[1]]
+
         else:
             raise ValueError
-            return 0
+
+        return result
         
     def section(self, mini, maxi, direction):
         # Takes either a horizontal or vertical slice of the matrix between
         # mini and maxi inclusive
-        if direction in ["vertial", "v"]:
+        if direction in ["vertical", "v"]:
             result = Matrix(m=self.get_dim()[0], n=maxi-mini+1)
             for i in range(result.get_dim()[0]):
                 result[i] = self[i][mini:(maxi+1)]
@@ -280,7 +287,7 @@ class Wave:
         # bytes 12:16 'fmt '
         sampleRate = contents[24:26]
         self.sampleRate = int(Wave.little_bin(sampleRate), 2)
-        
+
         channels = contents[22:24]
         self.channels = int(Wave.little_bin(channels), 2)
 
@@ -289,20 +296,20 @@ class Wave:
 
         bitDepth = contents[34:36]
         self.bitDepth = int(Wave.little_bin(bitDepth), 2)
-        
+
         # bytes 36:40 = "data"
         dataLen = contents[40:44]
-        self.dataLen = int(Wave.little_bin(dataLen), 2) 
-        
+        self.dataLen = int(Wave.little_bin(dataLen), 2)
+
         # Read in data from array
-        self.frameStartIndex = 44  # Not 100% sure if should be hardcoded or dynamic, mostly sure its constant
-        print(self.dataLen, self.frameSize)
+        self.frameStartIndex = 44
+
         framesNum = self.dataLen / self.frameSize
         if framesNum.is_integer():
             framesNum = int(framesNum)
         else:
             raise ValueError("Non integer frame number")
-        
+
         self.frameDataLists = [[] for i in range(self.channels)]
         for frame in range(framesNum):
             start = self.frameStartIndex + frame * self.frameSize
@@ -311,22 +318,22 @@ class Wave:
             if not len(data) == self.channels * self.bitDepth // 8:
                 raise ValueError("Invalid bit depth")
             n = self.bitDepth // 8
-            samples = [data[i:i+n] for i in range(0, len(data), n)]
+            samples = [data[i:i + n] for i in range(0, len(data), n)]
             for i in range(self.channels):
                 self.frameDataLists[i].append([self.signed_int(samples[i])])
 
-        self.dataMatrices = [Matrix(sampleList) for sampleList in self.frameDataLists]
-    
+        self.dataMatrix = Matrix(self.frameDataLists[0])
+        for channel in range(len(self.frameDataLists)):
+            self.dataMatrix.concatenate(Matrix(self.frameDataLists[channel]), "h")
+
     @staticmethod
     def little_bin(rawbytes):
         """Returns the binary representation of an unsigned 32 bit integer,
             from little endian hex"""
-        # print(rawbytes)
         bytez = []
         for i in rawbytes:
             bytez.append(hex(i)[2:].zfill(2))
         hexstr = "".join(bytez[::-1])
-        # at this point need a string of raw hex digits only
         result = ""
         for x in hexstr:
             digits = bin(int(x, 16))[2:].zfill(4)
@@ -343,33 +350,34 @@ class Wave:
             else:
                 res = int(Wave.little_bin(rawbytes), 2)
             return res
-        
+
         elif self.bitDepth == 32:
             # Data is a float (-1.0f ro 1f)
             raise NotImplementedError("Cannot read 32 bit wave file yet")
 
-    def get_data(self):
-        return self.dataMatrices
-    
+    def get_channel(self, chan):
+        return self.dataMatrix.section(chan, chan, "v")
+
     def convert_hertz(self, vector):
         """Converts a fourier transform output index to its value in Hz"""
         N = vector.get_dim()[0]
-        T = N /self.sampleRate
-        df = 1/T
+        T = N / self.sampleRate
+        df = 1 / T
         result = Matrix(m=N, n=1)
         for n in range(N):
-            if n < N/2:
-                result[n][0] = df*n
+            if n < N / 2:
+                result[n][0] = df * n // 2
             else:
-                result[n][0] = df*(n-N)
+                result[n][0] = df * (n - N) // 2
         return result
-    
+
+
 class Fourier(Matrix):
     """Performs a fourier transform on one Matrix of time domain values and returns a Matrix of
     frequency domain values"""
 
     def __init__(self, matrix, pad=False):
-        Matrix.__init__(self, matrix)
+        super().__init__(matrix)
         self._p = math.ceil(math.log(matrix.get_dim()[0], 2))
         
         if pad:
@@ -377,7 +385,7 @@ class Fourier(Matrix):
             if length > 0:
                 left = math.ceil(length/2)
                 right = length//2
-                self._contents = Matrix(m=left, n=1).concatanate(self, "v").concatanate(Matrix(m=right, n=1), "v")._contents
+                self._contents = Matrix(m=left, n=1).concatenate(self, "v").concatenate(Matrix(m=right, n=1), "v")._contents
             self._dimensions[0] = 2**self._p
         
         self._omega_N = cmath.exp(-2j * math.pi / self.get_dim()[0])
@@ -387,20 +395,14 @@ class Fourier(Matrix):
         
     def get_omega(self):
         return self._omega_N
-    
+
     def DFT(self):
         N = self.get_dim()[0]
-        DFT_result_list = []
+        operator = Matrix(m=N, n=N)
         for x in range(N):
-            factor = []
             for y in range(N):
-                factor.append(self._omega_N ** (x*y))
-            factorVector = Matrix(factor)
-            #factorVector = (1 / N) * factorVector
-            answer = factorVector * self
-            DFT_result_list.append(answer[0][0])
-            
-        return Fourier(Matrix([[i] for i in DFT_result_list]))
+                operator[y][x] = self._omega_N ** (x * y)
+        return operator * self
     
     @staticmethod
     def find_peaks(vector, lag, threshold, influence):
@@ -449,7 +451,7 @@ class Fourier(Matrix):
     @staticmethod
     def std(vector):
         n = vector.get_dim()[0]
-        total = sum([i[0]**2 for i in vector._contents])
+        total = sum([i[0]**2 for i in vector])
         return math.sqrt(total / n - Fourier.avg(vector)**2)
     
     @staticmethod
@@ -471,8 +473,8 @@ class Fourier(Matrix):
                 first[i][0] = even[i][0] + factor[0][:N // 2][i] * odd[i][0]
                 second[i][0] = even[i][0] + factor[0][N // 2:][i] * odd[i][0]
             
-            return Fourier(first.concatanate(second, "v"))
-        
+            return Fourier(first.concatenate(second, "v"))
+
     @staticmethod
     def IFFT(v):
         """Not 100% correct, need to divide all final values by 1/N"""        
@@ -507,70 +509,75 @@ class Fourier(Matrix):
 class Midi:
     """A representation of a midi file,
      can be written to an actual file through use of .write(filename)"""
+
     def __init__(self):
         self.format = 0
         self.tracks = 1
         self.division = 96
-        self.events = [(0,0)]
-        
+        self.events = [(0, 0)]
+
     def hz_to_key(self, hz):
-        return hex(int(69 + 12 * math.log(int(hz)/440, 2)))[2:]
-    
+        x = int(69 + 12 * math.log(hz / 440, 2))
+        if x not in list(range(128)):
+            print(f"broken {x}")
+        return hex(x)[2:]
+
     def velocity_to_hex(self, v):
         return "40"
-    
+
     def sample_to_tick(self, sample):
-        return int(int(sample) // (44100 / (2*self.division))) # Fix hardcoding
-    
+        return int(int(sample) // (44100 / (2 * self.division)))
+
     def add_note(self, start_sample, end_sample, note, velocity, channel=0):
         # At 120 BPM, 1s = 2b
         # 96 ticks per 1/4 note
         # 230 samples per tick
         note_on = "9" + hex(channel)[2:] + self.hz_to_key(note) + self.velocity_to_hex(velocity)
         note_off = "8" + hex(channel)[2:] + self.hz_to_key(note) + "40"
-        if int(end_sample) - int(start_sample) > 11025:
+        if int(end_sample) - int(start_sample) > 1000:
             self.events.append((self.sample_to_tick(start_sample), note_on))
             self.events.append((self.sample_to_tick(end_sample), note_off))
-        
+
     def write(self, filename):
         # Prepare file header
-        header = "4d54686400000006" 
+        header = "4d54686400000006"
         header += hex(self.format)[2:].zfill(4)
         header += hex(self.tracks)[2:].zfill(4)
         header += hex(self.division)[2:].zfill(4)
-        
+
         # Prepare track data
         track_data = ""
         ordered_events = list(sorted(self.events, key=lambda tup: tup[0]))
-        delta_times = [ordered_events[i][0] - ordered_events[i-1][0] for i in range(1, len(ordered_events))]
+        delta_times = [ordered_events[i][0] - ordered_events[i - 1][0] for i in
+                       range(1, len(ordered_events))]
         delta_vlq = [self.vlq(i) for i in delta_times]
         for index, event in enumerate(ordered_events):
-            if index != 0: # Empty event to begin 
-                track_data += delta_vlq[index-1] + event[1]
-        
-        track_data += "19ff2f0000ff2f00" # End of track event
-        
-        #prepare track header
+            if index != 0:  # Empty event to begin
+                track_data += delta_vlq[index - 1] + event[1]
+
+        track_data += "19ff2f0000ff2f00"  # End of track event
+
+        # Prepare track header
         track_header = "4d54726b"
-        track_header += hex(len(track_data)//2)[2:].zfill(8)
-        
+        track_header += hex(len(track_data) // 2)[2:].zfill(8)
+
         # Write file
         final_hex_string = header + track_header + track_data
         with open(filename, "wb") as midi_file:
             midi_file.write(bytearray.fromhex(final_hex_string))
-    
+
     def vlq(self, value):
         bits = list(bin(value)[2:])
         while len(bits) % 7 != 0:
             bits = ["0"] + bits
         rev_bits = bits[::-1]
         result = []
-        for i, v in enumerate(rev_bits):
-            result.append(v)
-            if (i+1) == 7:
+        for i, value in enumerate(rev_bits):
+            result.append(value)
+            if (i + 1) == 7:
                 result.append("0")
-            elif (i+1) % 7 == 0:
+            elif (i + 1) % 7 == 0:
                 result.append("1")
         binary_str = "".join(result)[::-1]
-        hex_result = [hex(int(binary_str[i:i + 4],2))[2:] for i in range(0, len(binary_str), 4)]
+        hex_result = [hex(int(binary_str[i:i + 4], 2))[2:] for i in range(0, len(binary_str), 4)]
         return "".join(hex_result)

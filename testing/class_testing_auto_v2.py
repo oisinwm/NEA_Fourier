@@ -343,7 +343,6 @@ class Matrix:
 
         return result
         
-        
     def section(self, mini, maxi, direction):
         # Takes either a horizontal or vertical slice of the matrix between
         # mini and maxi inclusive
