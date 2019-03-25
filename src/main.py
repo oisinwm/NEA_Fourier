@@ -1,11 +1,7 @@
 import json
 import pickle
 import time
-
 from classes import Matrix, Fourier, Wave, Midi
-
-import matplotlib.pyplot as plt
-
 
 
 filename = "24nocturnea.wav"

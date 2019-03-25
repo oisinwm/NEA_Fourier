@@ -1,6 +1,5 @@
 import pickle
 import math
-#import matplotlib.pyplot as plt
 import cmath
 import time
 
@@ -24,7 +23,7 @@ class Midi:
         return "40"
     
     def sample_to_tick(self, sample):
-        return int(int(sample) // (44100 / (2*self.division))) # Fix hardcoding
+        return int(int(sample) // (44100 / (2*self.division)))
     
     def add_note(self, start_sample, end_sample, note, velocity, channel=0):
         # At 120 BPM, 1s = 2b
@@ -35,8 +34,7 @@ class Midi:
         if int(end_sample) - int(start_sample) > 1000:
             self.events.append((self.sample_to_tick(start_sample), note_on))
             self.events.append((self.sample_to_tick(end_sample), note_off))
-        
-        
+
     def write(self, filename):
         # Prepare file header
         header = "4d54686400000006" 
@@ -50,12 +48,12 @@ class Midi:
         delta_times = [ordered_events[i][0] - ordered_events[i-1][0] for i in range(1, len(ordered_events))]
         delta_vlq = [self.vlq(i) for i in delta_times]
         for index, event in enumerate(ordered_events):
-            if index != 0: # Empty event to begin 
+            if index != 0:  # Empty event to begin
                 track_data += delta_vlq[index-1] + event[1]
         
         track_data += "19ff2f0000ff2f00" # End of track event
         
-        #prepare track header
+        # Prepare track header
         track_header = "4d54726b"
         track_header += hex(len(track_data)//2)[2:].zfill(8)
         
@@ -98,7 +96,7 @@ class Matrix:
         self._contents = []
         self._dimensions = [0, 0]
         self.number_types = (int, float, complex)
-        self.matrix_types = (Matrix, SquareMatrix, Fourier, Identity)
+        self.matrix_types = (Matrix, Fourier)
         if len(args) == 0 and len(kwargs) == 2:
             # construct from a and b, if validation passes
             if kwargs.keys() == {"m": 0, "n": 0}.keys():
@@ -201,12 +199,11 @@ class Matrix:
             # Matrix multiplication should be handled by mul not rmul,
             #  if being found here then an error has occurred
             raise NotImplementedError("Matrix multiplication should be handled by mul")
-        
+        else:
+            raise TypeError
         return result_matrix
 
     def __mul__(self, other):
-        if isinstance(other, Identity):
-            return Matrix(self)
         if isinstance(other, self.matrix_types):
             if self._dimensions[1] != other._dimensions[0]:
                 raise ValueError(f"Cannot multiply matrices of incorrect dimensions, "
@@ -231,7 +228,9 @@ class Matrix:
 
         elif isinstance(other, self.number_types):
             result_matrix = self.__rmul__(other)
-            
+
+        else:
+            raise TypeError
         return result_matrix
 
     def __add__(self, other):
@@ -305,13 +304,11 @@ class Matrix:
         for i in lst:
             result += [cmath.exp(x * i)]
         return Matrix([result])
-    
-    def concatanate(self, other, direction):
-        other_m, other_n = zip(other.get_dim())
-        other_m, other_n = other_m[0], other_n[0]
+
+    def concatenate(self, other, direction):
         if not isinstance(other, self.matrix_types):
-            raise ValueError(f"unsupported type for concatanate: {type(other)}")
-        if direction in ["vertial", "v"]:
+            raise ValueError(f"unsupported type for concatenate: {type(other)}")
+        if direction in ["vertical", "v"]:
             if not self.get_dim()[1] == other.get_dim()[1]:
                 raise ValueError
             
@@ -325,8 +322,6 @@ class Matrix:
             for y in range(self.get_dim()[0], result.get_dim()[0]):
                 for x in range(result.get_dim()[1]):
                     result[y][x] = other[y-self.get_dim()[0]][x]
-            
-            return result
         
         elif direction in ["horizontal", "h"]:
             if not self.get_dim()[0] == other.get_dim()[0]:
@@ -342,17 +337,17 @@ class Matrix:
             for x in range(self.get_dim()[1], result.get_dim()[1]):
                 for y in range(result.get_dim()[0]):
                     result[y][x] = other[y][x-self.get_dim()[1]]
-            
-            return result
+
         else:
             raise ValueError
-            return 0
+
+        return result
         
         
     def section(self, mini, maxi, direction):
         # Takes either a horizontal or vertical slice of the matrix between
         # mini and maxi inclusive
-        if direction in ["vertial", "v"]:
+        if direction in ["vertical", "v"]:
             result = Matrix(m=self.get_dim()[0], n=maxi-mini+1)
             for i in range(result.get_dim()[0]):
                 result[i] = self[i][mini:(maxi+1)]
@@ -406,7 +401,7 @@ class Wave:
         self.dataLen = int(Wave.little_bin(dataLen), 2) 
         
         # Read in data from array
-        self.frameStartIndex = 44  # Not 100% sure if should be hardcoded or dynamic, mostly sure its constant
+        self.frameStartIndex = 44
         
         framesNum = self.dataLen / self.frameSize
         if framesNum.is_integer():
@@ -425,19 +420,19 @@ class Wave:
             samples = [data[i:i+n] for i in range(0, len(data), n)]
             for i in range(self.channels):
                 self.frameDataLists[i].append([self.signed_int(samples[i])])
-
-        self.dataMatrices = [Matrix(sampleList) for sampleList in self.frameDataLists]
+        
+        self.dataMatrix = Matrix(self.frameDataLists[0])
+        for channel in range(len(self.frameDataLists)):
+            self.dataMatrix.concatenate(Matrix(self.frameDataLists[channel]), "h")
     
     @staticmethod
     def little_bin(rawbytes):
         """Returns the binary representation of an unsigned 32 bit integer,
             from little endian hex"""
-        # print(rawbytes)
         bytez = []
         for i in rawbytes:
             bytez.append(hex(i)[2:].zfill(2))
         hexstr = "".join(bytez[::-1])
-        # at this point need a string of raw hex digits only
         result = ""
         for x in hexstr:
             digits = bin(int(x, 16))[2:].zfill(4)
@@ -459,8 +454,8 @@ class Wave:
             # Data is a float (-1.0f ro 1f)
             raise NotImplementedError("Cannot read 32 bit wave file yet")
 
-    def get_data(self):
-        return self.dataMatrices
+    def get_channel(self, chan):
+        return self.dataMatrix.section(chan, chan, "v")
     
     def convert_hertz(self, vector):
         """Converts a fourier transform output index to its value in Hz"""
@@ -474,28 +469,14 @@ class Wave:
             else:
                 result[n][0] = df*(n-N) // 2
         return result
-    
-    
-class SquareMatrix(Matrix):
-    """A n*n matrix class, a special instance of a Matrix that is square"""
-
-    def __init__(self):
-        Matrix.__init__(self)
-
-
-class Identity(Matrix):
-    def __init__(self, x):
-        Matrix.__init__(self, m=x, n=x)
-        for i in range(x):
-            self[i][i] = 1
-    
+            
     
 class Fourier(Matrix):
     """Performs a fourier transform on one Matrix of time domain values and returns a Matrix of
     frequency domain values"""
 
     def __init__(self, matrix, pad=False):
-        Matrix.__init__(self, matrix)
+        super().__init__(matrix)
         self._p = math.ceil(math.log(matrix.get_dim()[0], 2))
         
         if pad:
@@ -503,7 +484,7 @@ class Fourier(Matrix):
             if length > 0:
                 left = math.ceil(length/2)
                 right = length//2
-                self._contents = Matrix(m=left, n=1).concatanate(self, "v").concatanate(Matrix(m=right, n=1), "v")._contents
+                self._contents = Matrix(m=left, n=1).concatenate(self, "v").concatenate(Matrix(m=right, n=1), "v")._contents
             self._dimensions[0] = 2**self._p
         
         self._omega_N = cmath.exp(-2j * math.pi / self.get_dim()[0])
@@ -516,21 +497,15 @@ class Fourier(Matrix):
     
     def DFT(self):
         N = self.get_dim()[0]
-        DFT_result_list = []
+        operator = Matrix(m=N, n=N)
         for x in range(N):
-            factor = []
             for y in range(N):
-                factor.append(self._omega_N ** (x*y))
-            factorVector = Matrix(factor)
-            #factorVector = (1 / N) * factorVector
-            answer = factorVector * self
-            DFT_result_list.append(answer[0][0])
-            
-        return Fourier(Matrix([[i] for i in DFT_result_list]))
+                operator[y][x] = self._omega_N ** (x*y)
+        return operator * self
     
     @staticmethod
     def find_peaks(vector, lag, threshold, influence):
-        """Algorithim from https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362"""
+        """Algorithm from https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data/22640362#22640362"""
         signals = Matrix(m=vector.get_dim()[0], n=1)
         filteredY = vector
         avgFilter = Matrix(m=vector.get_dim()[0], n=1)
@@ -593,14 +568,14 @@ class Fourier(Matrix):
             
             factor = Fourier.exp(-2j * math.pi / N, list(range(N)))
             
-            first = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
-            second = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
+            firstHalf = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
+            secondHalf = Matrix(m=even.get_dim()[0], n=even.get_dim()[1])
             
             for i in range(even.get_dim()[0]):
-                first[i][0] = even[i][0] + factor[0][:N // 2][i] * odd[i][0]
-                second[i][0] = even[i][0] + factor[0][N // 2:][i] * odd[i][0]
+                firstHalf[i][0] = even[i][0] + factor[0][:N // 2][i] * odd[i][0]
+                secondHalf[i][0] = even[i][0] + factor[0][N // 2:][i] * odd[i][0]
             
-            return Fourier(first.concatanate(second, "v"))
+            return Fourier(firstHalf.concatenate(secondHalf, "v"))
     
     @staticmethod
     def RFFT(vector):
@@ -695,7 +670,7 @@ class Fourier(Matrix):
         
     @staticmethod
     def parabolic(vector, index):
-        """Uses parabolic iterpolation to find the turning point of a parabola
+        """Uses parabolic interpolation to find the turning point of a parabola
         that passes through vector[index] and its neighbors."""
         index = int(index)
         xv = 0.5 * (vector[index-1][0] - vector[index+1][0]) / (vector[index-1][0] - 2 * vector[index][0] + vector[index+1][0]) + index
@@ -718,10 +693,10 @@ class Fourier(Matrix):
         return results
     
     @staticmethod
-    def apply_blackman_harris(vector):
+    def blackman_harris(vector):
         a = [0.35875, 0.48829, 0.14128, 0.01168]
         N = vector.get_dim()[0]
-        result = Fourier(Matrix(m=0, n=N))
+        result = Fourier(Matrix(m=N, n=1))
         for i in range(N):
             window = a[0] - a[1] * math.cos((2*math.pi*i)/(N-1)) + a[2] * math.cos((4*math.pi*i)/(N-1)) - a[3] * math.cos((6*math.pi*i)/(N-1))
             result[i][0] = window * vector[i][0]
@@ -736,14 +711,14 @@ if __name__ == "__main__":
     FOURIER_SIZE = 2048
     FOURIER_INCREMENT = 256
     
-    filename = "station_test.wav"
+    filename = "3_notes.wav"
     print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
     
     loadStartTime = time.time()
     try:
         with open(filename[:-4] + ".pickle", "rb") as file:
-            print("Cached file verison found!\n")
-            wave_file = pickle.load(file)
+            print("Cached file version found!\n")
+            wave_file = pickle.load(file) 
     except FileNotFoundError:
         print("No cache found.\n")
         wave_file = Wave(filename)
@@ -752,13 +727,12 @@ if __name__ == "__main__":
     loadEndTime = time.time()
     print(f"* Wave load complete. Elapsed time {loadEndTime-loadStartTime} seconds.")
     
-    wave_file.dataMatrices[0] = Matrix(m=10, n=1).concatanate(wave_file.get_data()[0], "v")
+    wave_channel = wave_file.get_channel(0)
     
     temp_lst = []
     results_lst = []
-    #for offset in range(9, 10):
-    for offset in range((int(wave_file.get_data()[0].get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
-        signal = Fourier(wave_file.get_data()[0].section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
+    for offset in range((int(wave_channel.get_dim()[0]) - (FOURIER_SIZE-FOURIER_INCREMENT)) // FOURIER_INCREMENT):
+        signal = Fourier(wave_channel.section(offset*FOURIER_INCREMENT, (offset*FOURIER_INCREMENT+FOURIER_SIZE)-1, "h"), pad=True)
         results_lst.append(Fourier.rms(signal))
         
     v = Matrix([[i] for i in results_lst])
@@ -775,47 +749,38 @@ if __name__ == "__main__":
     noteEndTime = time.time()
     print(f"* Note partitioning complete. Elapsed time {noteEndTime-loadEndTime} seconds.")
     
-    # plt.plot([i for i in wave_file.get_data()[0]])
-    # thang = [20000 if i//FOURIER_INCREMENT in dividers else 0 for i in range(wave_file.get_data()[0].get_dim()[0])]
-    # plt.plot(thang)
-    # plt.show()
-    
     midi_file = Midi()
     
     if len(dividers) > 0:
         start = 0
         for j in dividers:
-            end = j*FOURIER_INCREMENT
-            #end = start + 16384
-            print(f"length - {start}, {end}")
+            end = j * FOURIER_INCREMENT
+            # print(f"length - {start}, {end}")
             if start != end:
-                signal = Fourier(wave_file.get_data()[0].section(start, (end)-1, "h"), pad=True)
+                signal = Fourier(wave_channel.section(start, (end)-1, "h"), pad=True)
+                signal = Fourier.blackman_harris(signal)
                 corr = abs(Fourier.FFT(signal))
                 post = Fourier.median_filter(corr, 15).section(0, corr.get_dim()[0]//2, "h")
-                # plt.plot([i for i in post])
-                # plt.show()
             
                 value = max([i[0] for i in post])
                 pos = post._contents.index([value])
                 hz_post = wave_file.convert_hertz(post)
-                print(hz_post[pos][0])
+                # print(hz_post[pos][0])
                 if hz_post[pos][0] > 0:
                     midi_file.add_note(start, end, hz_post[pos][0], 40)
             start = end
             
     else:
         length = 2**int(math.log(wave_file.get_data()[0].get_dim()[0]-1, 2))
-        print(f"length - {length}")
-        signal = Fourier(wave_file.get_data()[0].section(0, (length)-1, "h"), pad=True)
+        # print(f"length - {length}")
+        signal = Fourier(wave_channel.section(0, (length)-1, "h"), pad=True)
         corr = abs(Fourier.autocorrelation(signal))
         post = Fourier.median_filter(corr, 15).section(0, corr.get_dim()[0]//2, "h")
-        # plt.plot([i for i in post])
-        # plt.plot([i[0]*3*10**11 for i in Fourier.find_peaks(post, 5, 4, 0.5)])
     
     fourierEndTime = time.time()
     print(f"* Fourier transforms complete. Elapsed time {fourierEndTime-noteEndTime} seconds.")
     
-    midi_file.write(filename[:-4] + "_real" + ".mid")
+    midi_file.write(filename[:-4] + "_test" + ".mid")
     endEndTime = time.time()
-    print(f"* Midi file write complete. Total elapsed time {endEndTime-loadStartTime} seconds.")
-    
+    print(f"* Midi file write complete. Elapsed time {endEndTime-fourierEndTime} seconds.")
+    print(f"Total elapsed time {endEndTime-loadStartTime} seconds.")
