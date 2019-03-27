@@ -770,7 +770,7 @@ if __name__ == "__main__":
             start = end
             
     else:
-        length = 2**int(math.log(wave_file.get_data()[0].get_dim()[0]-1, 2))
+        length = 2 ** int(math.log(wave_file.get_data()[0].get_dim()[0]-1, 2))
         # print(f"length - {length}")
         signal = Fourier(wave_channel.section(0, (length)-1, "h"), pad=True)
         corr = abs(Fourier.autocorrelation(signal))
