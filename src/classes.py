@@ -88,7 +88,14 @@ class Matrix:
     def __getitem__(self, key):
         if isinstance(key, int):
             return self._contents[key]
-        raise KeyError
+        elif isinstance(key, slice):
+            if self.get_dim()[1] == 1:
+                data = self._contents[key]
+                return Matrix(data)
+            else:
+                raise KeyError("Slice not supported for matrices, only vectors")
+        else:
+            raise KeyError
 
     def __setitem__(self, key, value):
         # print(self._contents, key)
@@ -121,12 +128,13 @@ class Matrix:
             # Matrix multiplication should be handled by mul not rmul,
             #  if being found here then an error has occurred
             raise NotImplementedError("Matrix multiplication should be handled by mul")
-        
+        else:
+            raise TypeError
         return result_matrix
 
     def __mul__(self, other):
         if issubclass(type(other), type(self)) or issubclass(type(self), type(other)):
-            if self._dimensions[1] != other._dimensions[0]:
+            if self._dimensions[1] != other.get_dim()[0]:
                 raise ValueError(f"Cannot multiply matrices of incorrect dimensions, "
                                  f"self n ({self._dimensions[1]}) != other "
                                  f"m ({other.get_dim()[0]})")
@@ -147,8 +155,10 @@ class Matrix:
                                 num += a
                         result_matrix[i][c] = num
 
-        elif isinstance(other, self.number_types) or isinstance(self.number_types, other):
+        elif isinstance(other, self.number_types):
             result_matrix = self.__rmul__(other)
+        else:
+            raise TypeError
         return result_matrix
 
     def __add__(self, other):
@@ -453,16 +463,15 @@ class Fourier(Matrix):
         n = vector.get_dim()[0]
         total = sum([i[0]**2 for i in vector])
         return math.sqrt(total / n - Fourier.avg(vector)**2)
-    
-    @staticmethod
-    def FFT(vector):
-        N = vector.get_dim()[0]
+
+    def FFT(self):
+        N = self.get_dim()[0]
         if N <= 2:
-            return vector.DFT()
+            return self.DFT()
         else:
-            even, odd = vector._contents[::2], vector._contents[1::2]
+            even, odd = self[::2], self[1::2]
             even, odd = Fourier(Matrix(even)), Fourier(Matrix(odd))
-            even, odd = Fourier.FFT(even), Fourier.FFT(odd)
+            even, odd = even.FFT(), odd.FFT()
             
             factor = Fourier.exp(-2j * math.pi / N, list(range(N)))
             
@@ -476,34 +485,40 @@ class Fourier(Matrix):
             return Fourier(first.concatenate(second, "v"))
 
     @staticmethod
-    def IFFT(v):
-        """Not 100% correct, need to divide all final values by 1/N"""        
-        reverse = Matrix(m=v.get_dim()[0], n=v.get_dim()[1])
-        for i in range(v.get_dim()[0]):
-            if i == 0:
-                reverse[i][0] = v[i][0]
-            else:
-                reverse[i][0] = v[-i][0]
-        result = Fourier.FFT(reverse)
-        return (1/v.get_dim()[0]) * result
-    
+    def rms(vector):
+        return math.sqrt(sum([i[0] ** 2 for i in vector]) / vector.get_dim()[0])
+
     @staticmethod
-    def autocorrelation(vector):
-        # Wiener–Khinchin theorem
-        FR = Fourier.FFT(vector)
-        S = FR
-        for i in range(FR.get_dim()[0]):
-            S[i][0] = FR[i][0] * FR[i][0].conjugate()
-        R = Fourier.IFFT(S)
-        return R
-    
+    def blackman_harris(vector):
+        a = [0.35875, 0.48829, 0.14128, 0.01168]
+        N = vector.get_dim()[0]
+        result = Fourier(Matrix(m=N, n=1))
+        for i in range(N):
+            window = a[0] - a[1] * math.cos((2 * math.pi * i) / (N - 1)) + a[2] * math.cos(
+                (4 * math.pi * i) / (N - 1)) - a[3] * math.cos((6 * math.pi * i) / (N - 1))
+            result[i][0] = window * vector[i][0]
+        return result
+
     @staticmethod
-    def from_combine(mat, test):
-        temp = Fourier(Matrix(m=mat.get_dim()[0], n=mat.get_dim()[1]))
-        temp._contents = mat._contents
-        temp._p = int(test._p)
-        temp._omega_N = test._omega_N
-        return temp
+    def med(vector):
+        values = sorted([i[0] for i in vector])
+        if len(values) % 2 == 0:
+            x = values[len(values) // 2 - 1:len(values) // 2 + 1]
+            return sum(x) / 2
+        else:
+            return values[len(values) // 2]
+
+    @staticmethod
+    def median_filter(vector, size):
+        y = Matrix(m=vector.get_dim()[0], n=1)
+        y[0][0] = vector[0][0]
+        y[vector.get_dim()[0] - 1][0] = vector[vector.get_dim()[0] - 1][0]
+        end = size / 2
+        for i in range(int(vector.get_dim()[0] - end) - size):
+            # print(vector.get_dim()[0], i+size-1, i, int(vector.get_dim()[0]-end))
+            window = vector.section(i, i + size - 1, "h")
+            y[int(end + i)][0] = Fourier.med(window)
+        return y
 
 
 class Midi:
@@ -550,7 +565,7 @@ class Midi:
         ordered_events = list(sorted(self.events, key=lambda tup: tup[0]))
         delta_times = [ordered_events[i][0] - ordered_events[i - 1][0] for i in
                        range(1, len(ordered_events))]
-        delta_vlq = [self.vlq(i) for i in delta_times]
+        delta_vlq = [Midi.vlq(i) for i in delta_times]
         for index, event in enumerate(ordered_events):
             if index != 0:  # Empty event to begin
                 track_data += delta_vlq[index - 1] + event[1]
@@ -566,7 +581,8 @@ class Midi:
         with open(filename, "wb") as midi_file:
             midi_file.write(bytearray.fromhex(final_hex_string))
 
-    def vlq(self, value):
+    @staticmethod
+    def vlq(value):
         bits = list(bin(value)[2:])
         while len(bits) % 7 != 0:
             bits = ["0"] + bits

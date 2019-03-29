@@ -166,7 +166,14 @@ class Matrix:
     def __getitem__(self, key):
         if isinstance(key, int):
             return self._contents[key]
-        raise KeyError
+        elif isinstance(key, slice):
+            if self.get_dim()[1] == 1:
+                data = self._contents[key]
+                return Matrix(data)
+            else:
+                raise KeyError("Slice not supported for matrices, only vectors")
+        else:
+            raise KeyError
 
     def __setitem__(self, key, value):
         # print(self._contents, key)
