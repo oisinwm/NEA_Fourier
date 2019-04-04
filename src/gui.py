@@ -24,6 +24,10 @@ class Window(QtWidgets.QWidget):
         self.le.move(130, 22)
         self.le.resize(280, 20)
         self.le.setDisabled(True)
+        
+        self.progress = QtWidgets.QProgressBar(self)
+        self.progress.setGeometry(110, 60, 300, 25)
+        self.progress.setMaximum(100)
 
         self.setGeometry(300, 300, 500, 150)
         self.setWindowTitle('Wav to Midi Converter')
@@ -43,8 +47,7 @@ class Window(QtWidgets.QWidget):
         thread.start()
 
 
-    @staticmethod
-    def main(path):
+    def main(self, path):
         filename = path[-path[::-1].index("/"):]
 
         FOURIER_SIZE = 2048
@@ -68,7 +71,6 @@ class Window(QtWidgets.QWidget):
 
         wave_channel = wave_file.get_channel(0)
 
-        temp_lst = []
         results_lst = []
         for offset in range((int(wave_channel.get_dim()[0]) - (
                 FOURIER_SIZE - FOURIER_INCREMENT)) // FOURIER_INCREMENT):
@@ -87,15 +89,20 @@ class Window(QtWidgets.QWidget):
                     prev = i
                     dividers.append(i)
         dividers.append(len(x))
-
+        
+        self.progress.setValue(5)
         noteEndTime = time.time()
         print(f"* Note partitioning complete. Elapsed time {noteEndTime - loadEndTime} seconds.")
 
         midi_file = Midi()
-
+        
+        
         if len(dividers) > 0:
             start = 0
+            total = len(dividers)
             for j in dividers:
+                current = dividers.index(j)
+                self.progress.setValue(int((current*95)/total) + 5)
                 end = j * FOURIER_INCREMENT
                 # print(f"length - {start}, {end}")
                 if start != end:
@@ -122,7 +129,8 @@ class Window(QtWidgets.QWidget):
         fourierEndTime = time.time()
         print(
             f"* Fourier transforms complete. Elapsed time {fourierEndTime - noteEndTime} seconds.")
-
+        
+        self.progress.setValue(100)
         midi_file.write(filename[:-4] + ".mid")
         endEndTime = time.time()
         print(f"* Midi file write complete. Elapsed time {endEndTime - fourierEndTime} seconds.")

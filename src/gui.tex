@@ -1,0 +1,145 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{k+kn}{import} \PY{n+nn}{os}
+\PY{k+kn}{import} \PY{n+nn}{pickle}
+\PY{k+kn}{import} \PY{n+nn}{sys}
+\PY{k+kn}{import} \PY{n+nn}{time}
+\PY{k+kn}{import} \PY{n+nn}{math}
+\PY{k+kn}{import} \PY{n+nn}{threading}
+
+\PY{k+kn}{from} \PY{n+nn}{classes} \PY{k+kn}{import} \PY{n}{Matrix}\PY{p}{,} \PY{n}{Fourier}\PY{p}{,} \PY{n}{Wave}\PY{p}{,} \PY{n}{Midi}
+\PY{k+kn}{from} \PY{n+nn}{PyQt5} \PY{k+kn}{import} \PY{n}{QtWidgets}\PY{p}{,} \PY{n}{QtCore}
+
+
+\PY{k}{class} \PY{n+nc}{Window}\PY{p}{(}\PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QWidget}\PY{p}{)}\PY{p}{:}
+    \PY{k}{def} \PY{n+nf+fm}{\PYZus{}\PYZus{}init\PYZus{}\PYZus{}}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{)}\PY{p}{:}
+        \PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QWidget}\PY{o}{.}\PY{n+nf+fm}{\PYZus{}\PYZus{}init\PYZus{}\PYZus{}}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{btn} \PY{o}{=} \PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QPushButton}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{Browse}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n+nb+bp}{self}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{btn}\PY{o}{.}\PY{n}{move}\PY{p}{(}\PY{l+m+mi}{20}\PY{p}{,} \PY{l+m+mi}{20}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{btn}\PY{o}{.}\PY{n}{clicked}\PY{o}{.}\PY{n}{connect}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{get\PYZus{}files}\PY{p}{)}
+
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{start\PYZus{}btn} \PY{o}{=} \PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QPushButton}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{Begin Conversion}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n+nb+bp}{self}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{start\PYZus{}btn}\PY{o}{.}\PY{n}{move}\PY{p}{(}\PY{l+m+mi}{250}\PY{p}{,} \PY{l+m+mi}{100}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{start\PYZus{}btn}\PY{o}{.}\PY{n}{clicked}\PY{o}{.}\PY{n}{connect}\PY{p}{(}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{begin}\PY{p}{)}
+
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{le} \PY{o}{=} \PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QLineEdit}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{le}\PY{o}{.}\PY{n}{move}\PY{p}{(}\PY{l+m+mi}{130}\PY{p}{,} \PY{l+m+mi}{22}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{le}\PY{o}{.}\PY{n}{resize}\PY{p}{(}\PY{l+m+mi}{280}\PY{p}{,} \PY{l+m+mi}{20}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{le}\PY{o}{.}\PY{n}{setDisabled}\PY{p}{(}\PY{n+nb+bp}{True}\PY{p}{)}
+        
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{progress} \PY{o}{=} \PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QProgressBar}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{progress}\PY{o}{.}\PY{n}{setGeometry}\PY{p}{(}\PY{l+m+mi}{110}\PY{p}{,} \PY{l+m+mi}{60}\PY{p}{,} \PY{l+m+mi}{300}\PY{p}{,} \PY{l+m+mi}{25}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{progress}\PY{o}{.}\PY{n}{setMaximum}\PY{p}{(}\PY{l+m+mi}{100}\PY{p}{)}
+
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{setGeometry}\PY{p}{(}\PY{l+m+mi}{300}\PY{p}{,} \PY{l+m+mi}{300}\PY{p}{,} \PY{l+m+mi}{500}\PY{p}{,} \PY{l+m+mi}{150}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{setWindowTitle}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{Wav to Midi Converter}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{show}\PY{p}{(}\PY{p}{)}
+
+    \PY{k}{def} \PY{n+nf}{get\PYZus{}files}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{)}\PY{p}{:}
+        \PY{n}{fileName}\PY{p}{,} \PY{n}{\PYZus{}} \PY{o}{=} \PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QFileDialog}\PY{o}{.}\PY{n}{getOpenFileName}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{Single File}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{QtCore}\PY{o}{.}\PY{n}{QDir}\PY{o}{.}\PY{n}{rootPath}\PY{p}{(}\PY{p}{)} \PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{*.wav}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{le}\PY{o}{.}\PY{n}{setText}\PY{p}{(}\PY{n}{fileName}\PY{p}{)}
+        
+    \PY{k}{def} \PY{n+nf}{begin}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{)}\PY{p}{:}
+        \PY{n}{path} \PY{o}{=} \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{le}\PY{o}{.}\PY{n}{text}\PY{p}{(}\PY{p}{)}
+        \PY{n}{filename} \PY{o}{=} \PY{n}{path}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{n}{path}\PY{p}{[}\PY{p}{:}\PY{p}{:}\PY{o}{\PYZhy{}}\PY{l+m+mi}{1}\PY{p}{]}\PY{o}{.}\PY{n}{index}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{/}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}\PY{p}{:}\PY{p}{]}
+        \PY{n}{filesize} \PY{o}{=} \PY{n}{os}\PY{o}{.}\PY{n}{path}\PY{o}{.}\PY{n}{getsize}\PY{p}{(}\PY{n}{path}\PY{p}{)}
+        \PY{n}{time\PYZus{}est} \PY{o}{=} \PY{n+nb}{int}\PY{p}{(}\PY{n}{filesize} \PY{o}{*} \PY{l+m+mf}{0.0004161731354229695}\PY{p}{)}
+        \PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QMessageBox}\PY{o}{.}\PY{n}{question}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{Alert}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Coversion has begun on \PYZob{}filename\PYZcb{}, this may take a long time.}\PY{l+s+se}{\PYZbs{}n}\PY{l+s+s2}{Estimate of \PYZob{}time\PYZus{}est\PYZcb{}s}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,} \PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QMessageBox}\PY{o}{.}\PY{n}{Ok}\PY{p}{,} \PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QMessageBox}\PY{o}{.}\PY{n}{Ok}\PY{p}{)}
+        \PY{n}{thread} \PY{o}{=} \PY{n}{threading}\PY{o}{.}\PY{n}{Thread}\PY{p}{(}\PY{n}{target}\PY{o}{=}\PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{main}\PY{p}{,} \PY{n}{args}\PY{o}{=}\PY{p}{(}\PY{n}{path}\PY{p}{,}\PY{p}{)}\PY{p}{)}
+        \PY{n}{thread}\PY{o}{.}\PY{n}{start}\PY{p}{(}\PY{p}{)}
+
+
+    \PY{k}{def} \PY{n+nf}{main}\PY{p}{(}\PY{n+nb+bp}{self}\PY{p}{,} \PY{n}{path}\PY{p}{)}\PY{p}{:}
+        \PY{n}{filename} \PY{o}{=} \PY{n}{path}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{n}{path}\PY{p}{[}\PY{p}{:}\PY{p}{:}\PY{o}{\PYZhy{}}\PY{l+m+mi}{1}\PY{p}{]}\PY{o}{.}\PY{n}{index}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{/}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}\PY{p}{:}\PY{p}{]}
+
+        \PY{n}{FOURIER\PYZus{}SIZE} \PY{o}{=} \PY{l+m+mi}{2048}
+        \PY{n}{FOURIER\PYZus{}INCREMENT} \PY{o}{=} \PY{l+m+mi}{256}
+
+        \PY{n}{filename} \PY{o}{=} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{3\PYZus{}notes.wav}\PY{l+s+s2}{\PYZdq{}}
+        \PY{k}{print}\PY{p}{(}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+se}{\PYZbs{}n}\PY{l+s+s2}{Processing begun on file }\PY{l+s+s2}{\PYZsq{}}\PY{l+s+s2}{\PYZob{}filename\PYZcb{}}\PY{l+s+s2}{\PYZsq{}}\PY{l+s+s2}{, this will take a while.}\PY{l+s+se}{\PYZbs{}n}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+
+        \PY{n}{loadStartTime} \PY{o}{=} \PY{n}{time}\PY{o}{.}\PY{n}{time}\PY{p}{(}\PY{p}{)}
+        \PY{k}{try}\PY{p}{:}
+            \PY{k}{with} \PY{n+nb}{open}\PY{p}{(}\PY{n}{filename}\PY{p}{[}\PY{p}{:}\PY{o}{\PYZhy{}}\PY{l+m+mi}{4}\PY{p}{]} \PY{o}{+} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{.pickle}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{rb}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)} \PY{k}{as} \PY{n+nb}{file}\PY{p}{:}
+                \PY{k}{print}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Cached file version found!}\PY{l+s+se}{\PYZbs{}n}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+                \PY{n}{wave\PYZus{}file} \PY{o}{=} \PY{n}{pickle}\PY{o}{.}\PY{n}{load}\PY{p}{(}\PY{n+nb}{file}\PY{p}{)}
+        \PY{k}{except} \PY{n}{FileNotFoundError}\PY{p}{:}
+            \PY{k}{print}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{No cache found.}\PY{l+s+se}{\PYZbs{}n}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+            \PY{n}{wave\PYZus{}file} \PY{o}{=} \PY{n}{Wave}\PY{p}{(}\PY{n}{path}\PY{p}{)}
+            \PY{k}{with} \PY{n+nb}{open}\PY{p}{(}\PY{n}{filename}\PY{p}{[}\PY{p}{:}\PY{o}{\PYZhy{}}\PY{l+m+mi}{4}\PY{p}{]} \PY{o}{+} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{.pickle}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{wb}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)} \PY{k}{as} \PY{n+nb}{file}\PY{p}{:}
+                \PY{n}{pickle}\PY{o}{.}\PY{n}{dump}\PY{p}{(}\PY{n}{wave\PYZus{}file}\PY{p}{,} \PY{n+nb}{file}\PY{p}{,} \PY{n}{protocol}\PY{o}{=}\PY{n}{pickle}\PY{o}{.}\PY{n}{HIGHEST\PYZus{}PROTOCOL}\PY{p}{)}
+        \PY{n}{loadEndTime} \PY{o}{=} \PY{n}{time}\PY{o}{.}\PY{n}{time}\PY{p}{(}\PY{p}{)}
+        \PY{k}{print}\PY{p}{(}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{* Wave load complete. Elapsed time \PYZob{}loadEndTime \PYZhy{} loadStartTime\PYZcb{} seconds.}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+
+        \PY{n}{wave\PYZus{}channel} \PY{o}{=} \PY{n}{wave\PYZus{}file}\PY{o}{.}\PY{n}{get\PYZus{}channel}\PY{p}{(}\PY{l+m+mi}{0}\PY{p}{)}
+
+        \PY{n}{results\PYZus{}lst} \PY{o}{=} \PY{p}{[}\PY{p}{]}
+        \PY{k}{for} \PY{n}{offset} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{p}{(}\PY{n+nb}{int}\PY{p}{(}\PY{n}{wave\PYZus{}channel}\PY{o}{.}\PY{n}{get\PYZus{}dim}\PY{p}{(}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{)} \PY{o}{\PYZhy{}} \PY{p}{(}
+                \PY{n}{FOURIER\PYZus{}SIZE} \PY{o}{\PYZhy{}} \PY{n}{FOURIER\PYZus{}INCREMENT}\PY{p}{)}\PY{p}{)} \PY{o}{/}\PY{o}{/} \PY{n}{FOURIER\PYZus{}INCREMENT}\PY{p}{)}\PY{p}{:}
+            \PY{n}{signal} \PY{o}{=} \PY{n}{Fourier}\PY{p}{(}\PY{n}{wave\PYZus{}channel}\PY{o}{.}\PY{n}{section}\PY{p}{(}\PY{n}{offset} \PY{o}{*} \PY{n}{FOURIER\PYZus{}INCREMENT}\PY{p}{,}
+                                                  \PY{p}{(}\PY{n}{offset} \PY{o}{*} \PY{n}{FOURIER\PYZus{}INCREMENT} \PY{o}{+} \PY{n}{FOURIER\PYZus{}SIZE}\PY{p}{)} \PY{o}{\PYZhy{}} \PY{l+m+mi}{1}\PY{p}{,}
+                                                  \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{h}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}\PY{p}{,} \PY{n}{pad}\PY{o}{=}\PY{n+nb+bp}{True}\PY{p}{)}
+            \PY{n}{results\PYZus{}lst}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n}{Fourier}\PY{o}{.}\PY{n}{rms}\PY{p}{(}\PY{n}{signal}\PY{p}{)}\PY{p}{)}
+
+        \PY{n}{v} \PY{o}{=} \PY{n}{Matrix}\PY{p}{(}\PY{p}{[}\PY{p}{[}\PY{n}{i}\PY{p}{]} \PY{k}{for} \PY{n}{i} \PY{o+ow}{in} \PY{n}{results\PYZus{}lst}\PY{p}{]}\PY{p}{)}
+        \PY{n}{x} \PY{o}{=} \PY{p}{[}\PY{n}{i}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]} \PY{k}{for} \PY{n}{i} \PY{o+ow}{in} \PY{n}{Fourier}\PY{o}{.}\PY{n}{find\PYZus{}peaks}\PY{p}{(}\PY{n}{v}\PY{p}{,} \PY{l+m+mi}{10}\PY{p}{,} \PY{l+m+mi}{3}\PY{p}{,} \PY{l+m+mf}{0.1}\PY{p}{)}\PY{p}{]}
+        \PY{n}{dividers} \PY{o}{=} \PY{p}{[}\PY{p}{]}
+        \PY{n}{prev} \PY{o}{=} \PY{l+m+mi}{0}
+        \PY{k}{for} \PY{n}{i} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,} \PY{n+nb}{len}\PY{p}{(}\PY{n}{x}\PY{p}{)}\PY{p}{)}\PY{p}{:}
+            \PY{k}{if} \PY{n}{x}\PY{p}{[}\PY{n}{i}\PY{p}{]} \PY{o}{==} \PY{l+m+mi}{1} \PY{o+ow}{and} \PY{n}{x}\PY{p}{[}\PY{n}{i} \PY{o}{\PYZhy{}} \PY{l+m+mi}{1}\PY{p}{]} \PY{o}{==} \PY{l+m+mi}{0}\PY{p}{:}
+                \PY{k}{if} \PY{n}{i} \PY{o}{\PYZhy{}} \PY{n}{prev} \PY{o}{\PYZgt{}} \PY{l+m+mi}{25}\PY{p}{:}
+                    \PY{n}{prev} \PY{o}{=} \PY{n}{i}
+                    \PY{n}{dividers}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n}{i}\PY{p}{)}
+        \PY{n}{dividers}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n+nb}{len}\PY{p}{(}\PY{n}{x}\PY{p}{)}\PY{p}{)}
+        
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{progress}\PY{o}{.}\PY{n}{setValue}\PY{p}{(}\PY{l+m+mi}{5}\PY{p}{)}
+        \PY{n}{noteEndTime} \PY{o}{=} \PY{n}{time}\PY{o}{.}\PY{n}{time}\PY{p}{(}\PY{p}{)}
+        \PY{k}{print}\PY{p}{(}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{* Note partitioning complete. Elapsed time \PYZob{}noteEndTime \PYZhy{} loadEndTime\PYZcb{} seconds.}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+
+        \PY{n}{midi\PYZus{}file} \PY{o}{=} \PY{n}{Midi}\PY{p}{(}\PY{p}{)}
+        
+        
+        \PY{k}{if} \PY{n+nb}{len}\PY{p}{(}\PY{n}{dividers}\PY{p}{)} \PY{o}{\PYZgt{}} \PY{l+m+mi}{0}\PY{p}{:}
+            \PY{n}{start} \PY{o}{=} \PY{l+m+mi}{0}
+            \PY{n}{total} \PY{o}{=} \PY{n+nb}{len}\PY{p}{(}\PY{n}{dividers}\PY{p}{)}
+            \PY{k}{for} \PY{n}{j} \PY{o+ow}{in} \PY{n}{dividers}\PY{p}{:}
+                \PY{n}{current} \PY{o}{=} \PY{n}{dividers}\PY{o}{.}\PY{n}{index}\PY{p}{(}\PY{n}{j}\PY{p}{)}
+                \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{progress}\PY{o}{.}\PY{n}{setValue}\PY{p}{(}\PY{n+nb}{int}\PY{p}{(}\PY{p}{(}\PY{n}{current}\PY{o}{*}\PY{l+m+mi}{95}\PY{p}{)}\PY{o}{/}\PY{n}{total}\PY{p}{)} \PY{o}{+} \PY{l+m+mi}{5}\PY{p}{)}
+                \PY{n}{end} \PY{o}{=} \PY{n}{j} \PY{o}{*} \PY{n}{FOURIER\PYZus{}INCREMENT}
+                \PY{c+c1}{\PYZsh{} print(f\PYZdq{}length \PYZhy{} \PYZob{}start\PYZcb{}, \PYZob{}end\PYZcb{}\PYZdq{})}
+                \PY{k}{if} \PY{n}{start} \PY{o}{!=} \PY{n}{end}\PY{p}{:}
+                    \PY{n}{signal} \PY{o}{=} \PY{n}{Fourier}\PY{p}{(}\PY{n}{wave\PYZus{}channel}\PY{o}{.}\PY{n}{section}\PY{p}{(}\PY{n}{start}\PY{p}{,} \PY{p}{(}\PY{n}{end}\PY{p}{)} \PY{o}{\PYZhy{}} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{h}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}\PY{p}{,} \PY{n}{pad}\PY{o}{=}\PY{n+nb+bp}{True}\PY{p}{)}
+                    \PY{n}{signal} \PY{o}{=} \PY{n}{Fourier}\PY{o}{.}\PY{n}{blackman\PYZus{}harris}\PY{p}{(}\PY{n}{signal}\PY{p}{)}
+                    \PY{n}{corr} \PY{o}{=} \PY{n+nb}{abs}\PY{p}{(}\PY{n}{Fourier}\PY{o}{.}\PY{n}{FFT}\PY{p}{(}\PY{n}{signal}\PY{p}{)}\PY{p}{)}
+                    \PY{n}{post} \PY{o}{=} \PY{n}{Fourier}\PY{o}{.}\PY{n}{median\PYZus{}filter}\PY{p}{(}\PY{n}{corr}\PY{p}{,} \PY{l+m+mi}{15}\PY{p}{)}\PY{o}{.}\PY{n}{section}\PY{p}{(}\PY{l+m+mi}{0}\PY{p}{,} \PY{n}{corr}\PY{o}{.}\PY{n}{get\PYZus{}dim}\PY{p}{(}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]} \PY{o}{/}\PY{o}{/} \PY{l+m+mi}{2}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{h}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+
+                    \PY{n}{value} \PY{o}{=} \PY{n+nb}{max}\PY{p}{(}\PY{p}{[}\PY{n}{i}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]} \PY{k}{for} \PY{n}{i} \PY{o+ow}{in} \PY{n}{post}\PY{p}{]}\PY{p}{)}
+                    \PY{n}{pos} \PY{o}{=} \PY{n}{post}\PY{o}{.}\PY{n}{\PYZus{}contents}\PY{o}{.}\PY{n}{index}\PY{p}{(}\PY{p}{[}\PY{n}{value}\PY{p}{]}\PY{p}{)}
+                    \PY{n}{hz\PYZus{}post} \PY{o}{=} \PY{n}{wave\PYZus{}file}\PY{o}{.}\PY{n}{convert\PYZus{}hertz}\PY{p}{(}\PY{n}{post}\PY{p}{)}
+                    \PY{c+c1}{\PYZsh{} print(hz\PYZus{}post[pos][0])}
+                    \PY{k}{if} \PY{n}{hz\PYZus{}post}\PY{p}{[}\PY{n}{pos}\PY{p}{]}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]} \PY{o}{\PYZgt{}} \PY{l+m+mi}{0}\PY{p}{:}
+                        \PY{n}{midi\PYZus{}file}\PY{o}{.}\PY{n}{add\PYZus{}note}\PY{p}{(}\PY{n}{start}\PY{p}{,} \PY{n}{end}\PY{p}{,} \PY{n}{hz\PYZus{}post}\PY{p}{[}\PY{n}{pos}\PY{p}{]}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,} \PY{l+m+mi}{40}\PY{p}{)}
+                \PY{n}{start} \PY{o}{=} \PY{n}{end}
+
+        \PY{k}{else}\PY{p}{:}
+            \PY{n}{length} \PY{o}{=} \PY{l+m+mi}{2} \PY{o}{*}\PY{o}{*} \PY{n+nb}{int}\PY{p}{(}\PY{n}{math}\PY{o}{.}\PY{n}{log}\PY{p}{(}\PY{n}{wave\PYZus{}file}\PY{o}{.}\PY{n}{get\PYZus{}data}\PY{p}{(}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]}\PY{o}{.}\PY{n}{get\PYZus{}dim}\PY{p}{(}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]} \PY{o}{\PYZhy{}} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{2}\PY{p}{)}\PY{p}{)}
+            \PY{c+c1}{\PYZsh{} print(f\PYZdq{}length \PYZhy{} \PYZob{}length\PYZcb{}\PYZdq{})}
+            \PY{n}{signal} \PY{o}{=} \PY{n}{Fourier}\PY{p}{(}\PY{n}{wave\PYZus{}channel}\PY{o}{.}\PY{n}{section}\PY{p}{(}\PY{l+m+mi}{0}\PY{p}{,} \PY{n}{length} \PY{o}{\PYZhy{}} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{h}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}\PY{p}{,} \PY{n}{pad}\PY{o}{=}\PY{n+nb+bp}{True}\PY{p}{)}
+            \PY{n}{corr} \PY{o}{=} \PY{n+nb}{abs}\PY{p}{(}\PY{n}{Fourier}\PY{o}{.}\PY{n}{autocorrelation}\PY{p}{(}\PY{n}{signal}\PY{p}{)}\PY{p}{)}
+            \PY{n}{post} \PY{o}{=} \PY{n}{Fourier}\PY{o}{.}\PY{n}{median\PYZus{}filter}\PY{p}{(}\PY{n}{corr}\PY{p}{,} \PY{l+m+mi}{15}\PY{p}{)}\PY{o}{.}\PY{n}{section}\PY{p}{(}\PY{l+m+mi}{0}\PY{p}{,} \PY{n}{corr}\PY{o}{.}\PY{n}{get\PYZus{}dim}\PY{p}{(}\PY{p}{)}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{]} \PY{o}{/}\PY{o}{/} \PY{l+m+mi}{2}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{h}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+
+        \PY{n}{fourierEndTime} \PY{o}{=} \PY{n}{time}\PY{o}{.}\PY{n}{time}\PY{p}{(}\PY{p}{)}
+        \PY{k}{print}\PY{p}{(}
+            \PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{* Fourier transforms complete. Elapsed time \PYZob{}fourierEndTime \PYZhy{} noteEndTime\PYZcb{} seconds.}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+        
+        \PY{n+nb+bp}{self}\PY{o}{.}\PY{n}{progress}\PY{o}{.}\PY{n}{setValue}\PY{p}{(}\PY{l+m+mi}{100}\PY{p}{)}
+        \PY{n}{midi\PYZus{}file}\PY{o}{.}\PY{n}{write}\PY{p}{(}\PY{n}{filename}\PY{p}{[}\PY{p}{:}\PY{o}{\PYZhy{}}\PY{l+m+mi}{4}\PY{p}{]} \PY{o}{+} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{.mid}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+        \PY{n}{endEndTime} \PY{o}{=} \PY{n}{time}\PY{o}{.}\PY{n}{time}\PY{p}{(}\PY{p}{)}
+        \PY{k}{print}\PY{p}{(}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{* Midi file write complete. Elapsed time \PYZob{}endEndTime \PYZhy{} fourierEndTime\PYZcb{} seconds.}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+        \PY{k}{print}\PY{p}{(}\PY{n}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Total elapsed time \PYZob{}endEndTime \PYZhy{} loadStartTime\PYZcb{} seconds.}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+    
+    
+\PY{k}{if} \PY{n+nv+vm}{\PYZus{}\PYZus{}name\PYZus{}\PYZus{}} \PY{o}{==} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{\PYZus{}\PYZus{}main\PYZus{}\PYZus{}}\PY{l+s+s1}{\PYZsq{}}\PY{p}{:}
+    \PY{n}{app} \PY{o}{=} \PY{n}{QtWidgets}\PY{o}{.}\PY{n}{QApplication}\PY{p}{(}\PY{n}{sys}\PY{o}{.}\PY{n}{argv}\PY{p}{)}
+    \PY{n}{ex} \PY{o}{=} \PY{n}{Window}\PY{p}{(}\PY{p}{)}
+    \PY{n}{sys}\PY{o}{.}\PY{n}{exit}\PY{p}{(}\PY{n}{app}\PY{o}{.}\PY{n}{exec\PYZus{}}\PY{p}{(}\PY{p}{)}\PY{p}{)}
+\end{Verbatim}
