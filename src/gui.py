@@ -46,7 +46,6 @@ class Window(QtWidgets.QWidget):
         thread = threading.Thread(target=self.main, args=(path,))
         thread.start()
 
-
     def main(self, path):
         filename = path[-path[::-1].index("/"):]
 

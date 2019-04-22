@@ -400,12 +400,6 @@ class Fourier(Matrix):
             self._dimensions[0] = 2**self._p
         
         self._omega_N = cmath.exp(-2j * math.pi / self.get_dim()[0])
-        
-    def get_p(self):
-        return int(self._p)
-        
-    def get_omega(self):
-        return self._omega_N
 
     def DFT(self):
         N = self.get_dim()[0]
@@ -648,23 +642,25 @@ if __name__ == "__main__":
     
     result_1 = abs(Fourier.FFT(wave_combined))
     plt.plot([i for i in result_1][:result_1.get_dim()[0]//2])
-    plt.legend(["FFT of Combined Sound Wave"])
     plt.xlabel("FFT Bin")
     plt.ylabel("Probability")
     plt.title("Raw Fourier Output")
-    x, y = zip(*[(3, 2299.17), (5, 2395.8)])
-    plt.scatter(x[0], y[0], color="red")
-    plt.scatter(x[1], y[1], color="green")
     plt.legend(["FFT of Combined Sound Wave", "First Peak in Bin 3, ~258Hz", "First Peak in Bin 5, ~430Hz"])
     plt.show()
     
     result_2 = abs(Fourier.FFT(Fourier.blackman_harris(wave_combined)))
     plt.plot([i for i in result_2][:result_2.get_dim()[0]//2])
-    plt.legend(["FFT of Combined Sound Wave"])
     plt.xlabel("FFT Bin")
     plt.ylabel("Probability")
     plt.title("Blackman-Harris Fourier Output")
-    x, y = zip(*[(3, 582.02), (5, 575.32)])
     plt.legend(["FFT of Combined Sound Wave", "First Peak in Bin 3, ~258Hz", "First Peak in Bin 5, ~430Hz"])
+    plt.show()
+    
+    result_2 = Fourier.blackman_harris(Matrix([[1] for i in range(100)]))
+    plt.plot([i for i in result_2])
+    plt.xlabel("Samples")
+    plt.ylabel("Amplitude")
+    plt.title("Blackman-Harris Window")
+    plt.fill([i for i in result_2], color=(31/256,119/256,180/256,0.7))
     plt.show()
     
