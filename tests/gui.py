@@ -3,7 +3,7 @@ import os
 import pickle
 import sys
 
-from classes import Matrix, Fourier, Wave, Midi
+from src.classes import Matrix, Fourier, Wave, Midi
 from PyQt5 import QtWidgets, QtCore
 
 
