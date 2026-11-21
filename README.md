@@ -6,8 +6,9 @@ The goal of this project was to develop a Python application capable of converti
 ## Repository structure
 
 - `src/` — application source code
-- `tests/` — test scripts and test fixtures
-- `data/samples/` — source audio and generated sample files
+- `tests/scripts/` — test and utility scripts
+- `tests/fixtures/` — organised test inputs and generated test fixtures
+- `data/samples/` — canonical source audio and generated sample files
 - `report/source/` — LaTeX report source and report assets
 - `report/report.pdf` — compiled report
 - `docs/notes/` — project notes and diagrams

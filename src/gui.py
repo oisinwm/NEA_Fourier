@@ -4,6 +4,7 @@ import pickle
 import sys
 import threading
 import time
+from pathlib import Path
 
 from classes import Fourier, Matrix, Midi, Wave
 from PyQt5 import QtCore, QtWidgets
@@ -60,7 +61,7 @@ class Window(QtWidgets.QWidget):
         FOURIER_SIZE = 2048
         FOURIER_INCREMENT = 256
 
-        filename = "data/samples/3_notes.wav"
+        filename = str(Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "audio" / "3_notes.wav")
         print(f"\nProcessing begun on file '{filename}', this will take a while.\n")
 
         loadStartTime = time.time()
